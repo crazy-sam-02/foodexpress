@@ -1,73 +1,166 @@
-# Welcome to your Lovable project
+# Food Express Client
 
-## Project info
+A modern, responsive food ordering application built with React, TypeScript, and Tailwind CSS.
 
-**URL**: https://lovable.dev/projects/5410c9b7-d43b-4272-9fe2-d077a0b7f265
+## ✨ Features
 
-## How can I edit this code?
+- 🛍️ User-friendly product browsing
+- 🛒 Real-time cart management
+- 👤 User authentication
+- 📱 Responsive design
+- 🌙 Dark mode support
+- 🔔 Real-time notifications
+- 📦 Order tracking
+- 👑 Admin dashboard
 
-There are several ways of editing your application.
+## 🛠️ Tech Stack
 
-**Use Lovable**
+- React 18
+- TypeScript
+- Tailwind CSS
+- Shadcn UI Components
+- Vite
+- Socket.IO Client
+- Firebase Authentication
+- Context API for state management
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/5410c9b7-d43b-4272-9fe2-d077a0b7f265) and start prompting.
+## 📋 Prerequisites
 
-Changes made via Lovable will be committed automatically to this repo.
+- Node.js (v14 or higher)
+- npm or yarn
+- Git
 
-**Use your preferred IDE**
+## ⚙️ Installation
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+1. Clone the repository:
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+```bash
+git clone https://github.com/crazy-sam-02/foodexpress.git
+cd foodexpress/client
+```
 
-Follow these steps:
+2. Install dependencies:
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+```bash
+npm install
+```
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+3. Create a `.env` file in the root directory:
 
-# Step 3: Install the necessary dependencies.
-npm i
+```env
+VITE_API_URL=http://localhost:5000
+VITE_FIREBASE_API_KEY=your_firebase_api_key
+VITE_FIREBASE_AUTH_DOMAIN=your_firebase_auth_domain
+VITE_FIREBASE_PROJECT_ID=your_firebase_project_id
+VITE_FIREBASE_STORAGE_BUCKET=your_firebase_storage_bucket
+VITE_FIREBASE_MESSAGING_SENDER_ID=your_firebase_messaging_sender_id
+VITE_FIREBASE_APP_ID=your_firebase_app_id
+```
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+4. Start the development server:
+
+```bash
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+## 📱 Pages & Features
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### User Features
 
-**Use GitHub Codespaces**
+- Home Page with featured products
+- Product listing with filters
+- Shopping cart
+- Checkout process
+- Order history
+- User profile management
+- Real-time order tracking
+- Notifications center
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+### Admin Features
 
-## What technologies are used for this project?
+- Dashboard with analytics
+- Product management
+- Order management
+- Category management
+- User management
+- Sales reports
 
-This project is built with:
+## 📦 Project Structure
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+```
+client/
+├── public/
+├── src/
+│   ├── components/
+│   │   ├── admin/
+│   │   ├── auth/
+│   │   ├── layout/
+│   │   └── ui/
+│   ├── contexts/
+│   ├── hooks/
+│   ├── lib/
+│   ├── pages/
+│   ├── types/
+│   ├── App.tsx
+│   └── main.tsx
+├── .env
+├── .gitignore
+├── index.html
+├── package.json
+├── tsconfig.json
+└── vite.config.ts
+```
 
-## How can I deploy this project?
+## 🎨 UI Components
 
-Simply open [Lovable](https://lovable.dev/projects/5410c9b7-d43b-4272-9fe2-d077a0b7f265) and click on Share -> Publish.
+The application uses Shadcn UI components, providing:
 
-## Can I connect a custom domain to my Lovable project?
+- Consistent design language
+- Accessible components
+- Dark mode support
+- Customizable themes
+- Responsive layouts
 
-Yes, you can!
+## 🔒 Authentication & Security
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+- Firebase Authentication integration
+- Protected routes
+- Role-based access control
+- Secure API calls
+- Token management
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+## 📱 Responsive Design
+
+The application is fully responsive and works on:
+
+- Desktop computers
+- Tablets
+- Mobile phones
+
+## 🚀 Performance
+
+- Optimized bundle size
+- Lazy loading of components
+- Image optimization
+- Caching strategies
+- Minimized re-renders
+
+## 🧪 Testing
+
+Run tests with:
+
+```bash
+npm run test
+```
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License.
