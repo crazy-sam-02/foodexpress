@@ -8,9 +8,9 @@ const AboutPage = () => {
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-12">
-            <h1 className="text-4xl font-bold text-gray-900 mb-4">About Sweet Treats</h1>
+            <h1 className="text-4xl font-bold text-gray-900 mb-4">About FoodExpress</h1>
             <p className="text-xl text-gray-600">
-              Crafting delicious memories since 2025
+              Delivering delicious meals since 2025
             </p>
           </div>
 

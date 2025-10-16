@@ -2,13 +2,13 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, setPersistence, browserLocalPersistence } from 'firebase/auth';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBxL1JlO0bhtLSf9t1mvvvK1cGDTZIYwzk",
-  authDomain: "foodexpress-c09c9.firebaseapp.com",
-  projectId: "foodexpress-c09c9",
-  storageBucket: "foodexpress-c09c9.firebasestorage.app",
-  messagingSenderId: "665515949459",
-  appId: "1:665515949459:web:fec589a37080f4889c7c66",
-  measurementId: "G-KF363DY8E1"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyBxL1JlO0bhtLSf9t1mvvvK1cGDTZIYwzk",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "foodexpress-c09c9.firebaseapp.com",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "foodexpress-c09c9",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "foodexpress-c09c9.firebasestorage.app",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "665515949459",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:665515949459:web:fec589a37080f4889c7c66",
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "G-KF363DY8E1"
 };
 
 // Initialize Firebase
