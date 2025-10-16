@@ -86,48 +86,43 @@ const LoginPage = () => {
         }
         setIsLoading(true);
         try {
-                    // Preflight: verify the email is registered
-                    const methods = await fetchSignInMethodsForEmail(auth, resetEmail.trim().toLowerCase());
-                    if (!methods || methods.length === 0) {
-                        toast.error('No account found with this exact email in this environment. Check spelling/aliases (e.g., plus tags), or try "Sign in with Google" if you registered with Google.');
-                        setIsLoading(false);
-                        return;
-                    }
-                    if (!methods.includes('password')) {
-                        toast.error('This account uses Google sign-in. Please sign in with Google, then set a password from your Profile to enable password reset.');
-                        setIsLoading(false);
-                        return;
-                    }
-                const actionCodeSettings = {
-                    url: `${window.location.origin}/login`,
-                    handleCodeInApp: false,
-                } as const;
-                await sendPasswordResetEmail(auth, resetEmail.trim().toLowerCase(), actionCodeSettings);
-            toast.success('Password reset email sent');
+            // Try to send password reset email directly
+            // Firebase will handle validation internally
+            const actionCodeSettings = {
+                url: `${window.location.origin}/login`,
+                handleCodeInApp: false,
+            } as const;
+            
+            await sendPasswordResetEmail(auth, resetEmail.trim().toLowerCase(), actionCodeSettings);
+            
+            toast.success('If an account with this email exists, a password reset link has been sent.');
             setIsResetOpen(false);
             setResetEmail('');
         } catch (error: any) {
             console.error('Password reset error:', error);
-                    const code = error?.code as string | undefined;
-                    switch (code) {
-                        case 'auth/invalid-email':
-                            toast.error('Invalid email address');
-                            break;
-                        case 'auth/missing-email':
-                            toast.error('Please enter your email');
-                            break;
-                        case 'auth/operation-not-allowed':
-                            toast.error('Email/password sign-in is disabled in Firebase');
-                            break;
-                        case 'auth/invalid-continue-uri':
-                            toast.error('The return URL is not allowed. Add your domain to Firebase Authorized domains');
-                            break;
-                        case 'auth/user-not-found':
-                            toast.error('No user found with this email');
-                            break;
-                        default:
-                            toast.error('Failed to send reset email');
-                    }
+            const code = error?.code as string | undefined;
+            switch (code) {
+                case 'auth/invalid-email':
+                    toast.error('Please enter a valid email address');
+                    break;
+                case 'auth/missing-email':
+                    toast.error('Please enter your email address');
+                    break;
+                case 'auth/user-not-found':
+                    // Firebase security: Don't reveal if user exists or not
+                    toast.success('If an account with this email exists, a password reset link has been sent.');
+                    setIsResetOpen(false);
+                    setResetEmail('');
+                    break;
+                case 'auth/too-many-requests':
+                    toast.error('Too many password reset attempts. Please try again later.');
+                    break;
+                case 'auth/operation-not-allowed':
+                    toast.error('Password reset is currently disabled. Please contact support.');
+                    break;
+                default:
+                    toast.error('Unable to send reset email. Please try again or contact support.');
+            }
         } finally {
             setIsLoading(false);
         }
@@ -271,7 +266,8 @@ const LoginPage = () => {
                     <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl w-full max-w-sm p-6">
                         <h2 className="text-xl font-semibold text-center mb-2">Reset Password</h2>
                         <p className="text-sm text-gray-600 dark:text-gray-400 text-center mb-4">
-                            Enter your email address and we&apos;ll send you a reset link.
+                            Enter your email address and we&apos;ll send you a password reset link. 
+                            If you signed up with Google, please use Google Sign-in instead.
                         </p>
                         <form onSubmit={handlePasswordReset} className="space-y-4">
                             <div className="space-y-2">
