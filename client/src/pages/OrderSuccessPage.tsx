@@ -88,7 +88,7 @@ const OrderSuccessPage = () => {
                       <p className="font-medium text-sm">{item.product.name}</p>
                       <p className="text-sm text-gray-600">Quantity: {item.quantity}</p>
                     </div>
-                    <p className="font-medium text-sm">${(item.product.price * item.quantity).toFixed(2)}</p>
+                    <p className="font-medium text-sm">₹{(item.product.price * item.quantity).toFixed(2)}</p>
                   </div>
                 ))}
               </div>
@@ -97,11 +97,11 @@ const OrderSuccessPage = () => {
               <div className="space-y-2 pt-4 border-t">
                 <div className="flex justify-between text-sm">
                   <span>Subtotal</span>
-                  <span>${subtotal.toFixed(2)}</span>
+                  <span>₹{subtotal.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>Tax</span>
-                  <span>${tax.toFixed(2)}</span>
+                  <span>₹{tax.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="flex items-center gap-2">
@@ -112,13 +112,13 @@ const OrderSuccessPage = () => {
                     {shipping === 0 ? (
                       <Badge className="bg-green-100 text-green-800">Free</Badge>
                     ) : (
-                      `$${shipping.toFixed(2)}`
+                      `₹${shipping.toFixed(2)}`
                     )}
                   </span>
                 </div>
                 <div className="flex justify-between font-semibold text-lg pt-2 border-t">
                   <span>Total</span>
-                  <span>${total.toFixed(2)}</span>
+                  <span>₹{total.toFixed(2)}</span>
                 </div>
               </div>
             </CardContent>

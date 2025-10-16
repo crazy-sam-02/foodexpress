@@ -4,12 +4,12 @@ import { AdminLayout } from '@/components/admin/AdminLayout';
 import { OrderDetailsModal } from '@/components/admin/OrderDetailsModal';
 import { Package, ShoppingCart, TrendingUp, Users } from 'lucide-react';
 import { useProducts } from '@/contexts/ProductsContext';
-import { useOrders } from '@/contexts/OrdersContext';
+import { useAdminOrders } from '@/contexts/AdminOrdersContext';
 import { Order } from '@/types';
 
 const AdminDashboard = () => {
   const { products, categories } = useProducts();
-  const { orders, getTotalSales, getTodaysSales, getPendingOrdersCount } = useOrders();
+  const { orders, getTotalSales, getTodaysSales, getPendingOrdersCount } = useAdminOrders();
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
   const totalProducts = products.length;
@@ -33,8 +33,8 @@ const AdminDashboard = () => {
     },
     {
       title: 'Total Sales',
-      value: `$${totalSales.toLocaleString()}`,
-      subtitle: `$${todaysSales} today`,
+      value: `₹${totalSales.toLocaleString()}`,
+      subtitle: `₹${todaysSales} today`,
       icon: TrendingUp,
       color: 'text-green-600',
       bgColor: 'bg-green-100'
@@ -148,7 +148,7 @@ const AdminDashboard = () => {
                       <div className={`w-2 h-2 rounded-full ${getStatusColor(order.status)}`}></div>
                       <div className="flex-1">
                         <p className="text-sm font-medium text-gray-900">
-                          Order #{order.id} - ${order.total.toFixed(2)}
+                          Order #{order.id} - ₹{order.total.toFixed(2)}
                         </p>
                         <p className="text-xs text-gray-500">
                           {new Date(order.orderDate).toLocaleString('en-US', {

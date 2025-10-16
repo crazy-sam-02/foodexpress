@@ -1,7 +1,9 @@
 import express from 'express';
+import mongoose from 'mongoose';
 import Order from '../models/Order.js';
 import Product from '../models/Product.js';
 import { authenticateToken } from '../middleware/auth.js';
+import { requireAdminSession } from '../middleware/adminSession.js';
 import { io } from '../server.js';
 
 const router = express.Router();
@@ -144,10 +146,10 @@ router.post('/', authenticateToken, async (req, res) => {
       });
     }
 
-    if (!paymentMethod || !['cash', 'card', 'paypal', 'upi'].includes(paymentMethod)) {
+    if (!paymentMethod || !['cash', 'card', 'paypal', 'upi', 'CASH', 'CARD', 'PAYPAL', 'UPI'].includes(paymentMethod.toLowerCase())) {
       return res.status(400).json({
         success: false,
-        message: 'Valid payment method is required'
+        message: 'Valid payment method is required (cash, card, paypal, or upi)'
       });
     }
 
@@ -189,10 +191,10 @@ router.post('/', authenticateToken, async (req, res) => {
       calculatedTotal += product.price * item.quantity;
     }
 
-    // Add tax and shipping (8% tax, $5.99 shipping under $50)
+    // Add tax and shipping (8% tax, ₹499 shipping under ₹500)
     const subtotal = calculatedTotal;
     const tax = subtotal * 0.08;
-    const shipping = subtotal > 50 ? 0 : 5.99;
+    const shipping = subtotal > 500 ? 0 : 499;
     calculatedTotal = subtotal + tax + shipping;
 
     // Verify the total matches (with small tolerance for floating point)
@@ -214,7 +216,9 @@ router.post('/', authenticateToken, async (req, res) => {
       deliveryAddress,
       notes: notes || '',
       paymentMethod,
-      orderDate: new Date()
+      orderDate: new Date(),
+      orderAction: 'none',
+      discount: 0
     };
 
     console.log('Creating order with data:', orderData);
@@ -331,8 +335,8 @@ router.patch('/:id/status', authenticateToken, async (req, res) => {
   }
 });
 
-// Get all orders (admin only)
-router.get('/admin/all', authenticateToken, async (req, res) => {
+// Get all orders (admin only) - protected by admin session
+router.get('/admin/all', requireAdminSession, async (req, res) => {
   try {
     // TODO: Add admin role check middleware
     const orders = await Order.find()
@@ -344,11 +348,11 @@ router.get('/admin/all', authenticateToken, async (req, res) => {
       success: true,
       orders: orders.map(order => ({
         id: order._id.toString(),
-        userId: order.userId._id.toString(),
-        userName: order.userId.username,
-        userEmail: order.userId.email,
+        userId: order.userId ? order.userId._id.toString() : null,
+        userName: order.userId ? order.userId.username : 'N/A',
+        userEmail: order.userId ? order.userId.email : 'N/A',
         items: order.items.map(item => ({
-          product: {
+          product: item.product ? {
             _id: item.product._id.toString(),
             id: item.product._id.toString(),
             name: item.product.name,
@@ -356,7 +360,7 @@ router.get('/admin/all', authenticateToken, async (req, res) => {
             price: item.product.price,
             image: item.product.image,
             category: item.product.category
-          },
+          } : null,
           quantity: item.quantity
         })),
         total: order.total,
@@ -364,7 +368,9 @@ router.get('/admin/all', authenticateToken, async (req, res) => {
         orderDate: order.orderDate,
         deliveryAddress: order.deliveryAddress,
         notes: order.notes,
-        paymentMethod: order.paymentMethod
+        paymentMethod: order.paymentMethod,
+        orderAction: order.orderAction,
+        discount: order.discount
       }))
     });
   } catch (error) {
@@ -374,6 +380,100 @@ router.get('/admin/all', authenticateToken, async (req, res) => {
       message: 'Failed to fetch orders',
       error: error.message
     });
+  }
+});
+
+// Update order details (admin only)
+router.patch('/admin/:id', requireAdminSession, async (req, res) => {
+  try {
+    const { status, orderAction, discount } = req.body;
+    console.log('[Admin] Update order request received:', { id: req.params.id, status, orderAction, discount });
+
+    // Validate input
+    if (status && !['pending', 'processing', 'shipped', 'delivered', 'cancelled', 'confirmed', 'preparing', 'ready'].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid status'
+      });
+    }
+
+    if (discount && (isNaN(discount) || discount < 0)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid discount value'
+      });
+    }
+
+    const updateData = {};
+    if (status) updateData.status = status;
+    if (orderAction) updateData.orderAction = orderAction;
+    if (discount !== undefined) updateData.discount = discount;
+
+    console.log('[Admin] Updating order with data:', updateData);
+
+    const order = await Order.findByIdAndUpdate(
+      req.params.id,
+      updateData,
+      { new: true }
+    ).populate('items.product');
+
+    if (!order) {
+      console.warn('[Admin] Order not found for ID:', req.params.id);
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found'
+      });
+    }
+
+    console.log('[Admin] Order updated successfully:', order._id);
+
+    // Emit socket event for real-time updates
+    io.emit('orderUpdated', {
+      orderId: order._id.toString(),
+      ...updateData
+    });
+
+    res.json({
+      success: true,
+      message: 'Order updated successfully',
+      order
+    });
+  } catch (error) {
+    console.error('Error updating order:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update order',
+      error: error.message
+    });
+  }
+});
+
+// Add specific route for status updates to match frontend expectations
+router.patch('/admin/:id/status', requireAdminSession, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    console.log('[Admin] Update status request received:', { id, status });
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      console.warn('[Admin] Invalid order ID format:', id);
+      return res.status(400).json({ message: 'Invalid order ID' });
+    }
+
+    const order = await Order.findById(id);
+    if (!order) {
+      console.warn('[Admin] Order not found for ID:', id);
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    order.status = status;
+    await order.save();
+
+    console.log('[Admin] Order status updated successfully:', { id, status });
+    res.json({ message: 'Order status updated successfully' });
+  } catch (error) {
+    console.error('[Admin] Error updating order status:', error);
+    res.status(500).json({ message: 'Failed to update order status' });
   }
 });
 

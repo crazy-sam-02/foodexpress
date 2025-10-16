@@ -1,4 +1,5 @@
 import express from "express";
+import mongoose from "mongoose";
 import Cart from "../models/Cart.js";
 import Product from "../models/Product.js";
 import { requireAuth } from "../middleware/auth.js";
@@ -43,7 +44,7 @@ router.get("/", requireAuth, async (req, res) => {
   try {
     const cart = await Cart.findOne({ user: req.user.id }).populate({
       path: "items.product",
-      select: "name price image description",
+      select: "name price image description category",
     });
 
     res.status(200).json({
@@ -67,6 +68,9 @@ router.post("/add", requireAuth, async (req, res) => {
 
     if (!productId) {
       return res.status(400).json({ success: false, message: "Product ID is required" });
+    }
+    if (!mongoose.Types.ObjectId.isValid(productId)) {
+      return res.status(400).json({ success: false, message: "Invalid productId" });
     }
     if (quantity < 1) {
       return res.status(400).json({ success: false, message: "Quantity must be at least 1" });
@@ -101,7 +105,7 @@ router.post("/add", requireAuth, async (req, res) => {
 
     const updatedCart = await Cart.findById(cart._id).populate({
       path: "items.product",
-      select: "name price image description",
+      select: "name price image description category",
     });
 
     res.status(200).json({
@@ -122,6 +126,9 @@ router.post("/add", requireAuth, async (req, res) => {
 router.put("/update/:itemId", requireAuth, async (req, res) => {
   try {
     const { itemId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(itemId)) {
+      return res.status(400).json({ success: false, message: 'Invalid itemId' });
+    }
     const { quantity } = req.body;
 
     if (typeof quantity !== "number" || quantity < 0) {
@@ -155,7 +162,7 @@ router.put("/update/:itemId", requireAuth, async (req, res) => {
 
     const updatedCart = await Cart.findById(cart._id).populate({
       path: "items.product",
-      select: "name price image description",
+      select: "name price image description category",
     });
 
     res.status(200).json({
@@ -192,7 +199,7 @@ router.delete("/remove/:itemId", requireAuth, async (req, res) => {
 
     const updatedCart = await Cart.findById(cart._id).populate({
       path: "items.product",
-      select: "name price image description",
+      select: "name price image description category",
     });
 
     res.status(200).json({

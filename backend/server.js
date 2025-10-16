@@ -18,7 +18,6 @@ dotenv.config();
 
 const app = express();
 
-// MongoDB connection
 const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/FoodExpress";
 mongoose.connect(MONGO_URI)
   .then(() => console.log("✅ MongoDB connected"))
@@ -42,7 +41,7 @@ app.use(cookieParser());
 // Session configuration
 app.use(
   session({
-    secret: process.env.SESSION_SECRET || "your-secret-key-change-this",
+    secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
     store: MongoStore.create({
@@ -90,6 +89,15 @@ app.use("/api/orders", orderRoutes);
 // Health check endpoint
 app.get("/health", (req, res) => {
   res.status(200).json({ status: "OK", message: "Server is running" });
+});
+
+// Test admin session endpoint
+app.get("/api/test/admin", (req, res) => {
+  res.status(200).json({ 
+    status: "OK", 
+    message: "Test endpoint working",
+    session: req.session?.admin ? "Admin session active" : "No admin session"
+  });
 });
 
 // Error handling middleware

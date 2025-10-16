@@ -23,7 +23,8 @@ const orderSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled'],
+    // Allow both legacy and new admin statuses
+    enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled', 'confirmed', 'preparing', 'ready'],
     default: 'pending'
   },
   orderDate: {
@@ -41,7 +42,21 @@ const orderSchema = new mongoose.Schema({
     type: String,
     enum: ['cash', 'card', 'paypal', 'upi'],
     required: true
+  },
+  orderAction: {
+    type: String,
+    default: 'none'
+  },
+  discount: {
+    type: Number,
+    default: 0
   }
+});
+
+// Add a pre-save hook for debugging
+orderSchema.pre('save', function (next) {
+  console.log('[Order Model] Saving order:', this);
+  next();
 });
 
 export default mongoose.model('Order', orderSchema);

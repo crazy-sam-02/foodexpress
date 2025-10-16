@@ -1,27 +1,9 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { io, Socket } from "socket.io-client";
 
-// Types
-export interface Product {
-  _id: string;
-  name: string;
-  description: string;
-  price: number;
-  image: string;
-  category: string;
-  inStock: boolean;
-  rating: number;
-  reviews: number;
-  tags: string[];
-}
-
-export interface Category {
-  _id: string;
-  name: string;
-  description: string;
-  image: string;
-  productCount: number;
-}
+// Import types from centralized location
+import { Product, Category } from '@/types';
+import { config } from '@/lib/config';
 
 interface ProductsContextType {
   products: Product[];
@@ -38,7 +20,7 @@ interface ProductsContextType {
 
 const ProductsContext = createContext<ProductsContextType | undefined>(undefined);
 
-const API_URL = "http://localhost:5000/api";
+// Remove this line as we'll use config.API_URL directly
 
 export const ProductsProvider = ({ children }: { children: ReactNode }) => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -48,7 +30,7 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
 
   // Initialize Socket.IO connection
   useEffect(() => {
-    const socketInstance = io("http://localhost:5000", {
+    const socketInstance = io(config.SOCKET_URL, {
       withCredentials: true,
     });
 
@@ -97,7 +79,7 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const response = await fetch(`${API_URL}/products`);
+        const response = await fetch(`${config.API_URL}/products`);
         const data = await response.json();
         setProducts(data);
       } catch (err) {
@@ -111,7 +93,7 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const response = await fetch(`${API_URL}/categories`);
+        const response = await fetch(`${config.API_URL}/categories`);
         const data = await response.json();
         setCategories(data);
       } catch (err) {
@@ -126,7 +108,7 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
   // ---------------- PRODUCT CRUD ----------------
   const addProduct = async (productData: Omit<Product, "_id" | "rating" | "reviews">) => {
     try {
-      const response = await fetch(`${API_URL}/products`, {
+      const response = await fetch(`${config.API_URL}/products`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(productData),
@@ -147,7 +129,7 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
 
   const updateProduct = async (productId: string, updates: Partial<Product>) => {
     try {
-      const response = await fetch(`${API_URL}/products/${productId}`, {
+      const response = await fetch(`${config.API_URL}/products/${productId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updates),
@@ -168,7 +150,7 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
 
   const deleteProduct = async (productId: string) => {
     try {
-      const response = await fetch(`${API_URL}/products/${productId}`, {
+      const response = await fetch(`${config.API_URL}/products/${productId}`, {
         method: "DELETE",
       });
 
@@ -186,7 +168,7 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
 
   const toggleProductStock = async (productId: string) => {
     try {
-      const response = await fetch(`${API_URL}/products/${productId}/stock`, {
+      const response = await fetch(`${config.API_URL}/products/${productId}/stock`, {
         method: "PATCH",
       });
 
@@ -206,7 +188,7 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
   // ---------------- CATEGORY CRUD ----------------
   const addCategory = async (categoryData: Omit<Category, "_id" | "productCount">) => {
     try {
-      const response = await fetch(`${API_URL}/categories`, {
+      const response = await fetch(`${config.API_URL}/categories`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(categoryData),
@@ -227,7 +209,7 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
 
   const updateCategory = async (categoryId: string, updates: Partial<Category>) => {
     try {
-      const response = await fetch(`${API_URL}/categories/${categoryId}`, {
+      const response = await fetch(`${config.API_URL}/categories/${categoryId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updates),
@@ -242,7 +224,7 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
       setCategories((prev) => prev.map((c) => (c._id === categoryId ? updated : c)));
       
       // Refresh products to get updated category names
-      const productsResponse = await fetch(`${API_URL}/products`);
+      const productsResponse = await fetch(`${config.API_URL}/products`);
       const productsData = await productsResponse.json();
       setProducts(productsData);
     } catch (error) {
@@ -253,7 +235,7 @@ export const ProductsProvider = ({ children }: { children: ReactNode }) => {
 
   const deleteCategory = async (categoryId: string) => {
     try {
-      const response = await fetch(`${API_URL}/categories/${categoryId}`, {
+      const response = await fetch(`${config.API_URL}/categories/${categoryId}`, {
         method: "DELETE",
       });
 

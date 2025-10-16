@@ -9,17 +9,17 @@ import { Layout } from '@/components/layout/Layout';
 const CartPage = () => {
   const { cartItems, updateQuantity, removeFromCart } = useCart();
 
-  const handleUpdateQuantity = (productId: number, newQuantity: number) => {
-    updateQuantity(productId, newQuantity);
+  const handleUpdateQuantity = (itemId: string | number, newQuantity: number) => {
+    updateQuantity(itemId, newQuantity);
   };
 
-  const handleRemoveItem = (productId: number) => {
-    removeFromCart(productId);
+  const handleRemoveItem = (itemId: string | number) => {
+    removeFromCart(itemId);
   };
 
-  const subtotal = cartItems.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
-  const tax = subtotal * 0.08; // 8% tax
-  const shipping = subtotal > 50 ? 0 : 5.99; // Free shipping over $50
+  const subtotal = cartItems.reduce((sum, item) => sum + ((item.price ?? item.product.price) * item.quantity), 0);
+  const tax = subtotal * 0.12; // 12% tax
+  const shipping = subtotal > 500 ? 0 : 49; // Free shipping over ₹500
   const total = subtotal + tax + shipping;
 
   if (cartItems.length === 0) {
@@ -60,7 +60,7 @@ const CartPage = () => {
               </CardHeader>
               <CardContent className="space-y-4">
                 {cartItems.map((item) => (
-                  <div key={item.product._id} className="flex items-center gap-4 p-4 border rounded-lg">
+                  <div key={item.id ?? item.product._id} className="flex items-center gap-4 p-4 border rounded-lg">
                     <img
                       src={item.product.image}
                       alt={item.product.name}
@@ -77,7 +77,7 @@ const CartPage = () => {
                       <Button
                         size="icon"
                         variant="outline"
-                        onClick={() => handleUpdateQuantity(item.product._id, item.quantity - 1)}
+                        onClick={() => handleUpdateQuantity(item.id, Math.max(0, item.quantity - 1))}
                       >
                         <Minus className="h-4 w-4" />
                       </Button>
@@ -85,19 +85,19 @@ const CartPage = () => {
                       <Button
                         size="icon"
                         variant="outline"
-                        onClick={() => handleUpdateQuantity(item.product._id, item.quantity + 1)}
+                        onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
                       >
                         <Plus className="h-4 w-4" />
                       </Button>
                     </div>
                     <div className="text-right">
-                      <p className="font-semibold text-lg">${(item.product.price * item.quantity).toFixed(2)}</p>
-                      <p className="text-sm text-gray-600">${item.product.price} each</p>
+                      <p className="font-semibold text-lg">₹{((item.price ?? item.product.price) * item.quantity).toFixed(2)}</p>
+                      <p className="text-sm text-gray-600">₹{(item.price ?? item.product.price).toFixed(2)} each</p>
                     </div>
                     <Button
                       size="icon"
                       variant="ghost"
-                      onClick={() => handleRemoveItem(item.product._id)}
+                      onClick={() => handleRemoveItem(item.id)}
                       className="text-red-500 hover:text-red-700"
                     >
                       <X className="h-4 w-4" />
@@ -117,11 +117,11 @@ const CartPage = () => {
               <CardContent className="space-y-4">
                 <div className="flex justify-between">
                   <span>Subtotal</span>
-                  <span>${subtotal.toFixed(2)}</span>
+                  <span>₹{subtotal.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Tax</span>
-                  <span>${tax.toFixed(2)}</span>
+                  <span>₹{tax.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Shipping</span>
@@ -129,19 +129,19 @@ const CartPage = () => {
                     {shipping === 0 ? (
                       <Badge className="bg-green-100 text-green-800">Free</Badge>
                     ) : (
-                      `$${shipping.toFixed(2)}`
+                      `₹${shipping.toFixed(2)}`
                     )}
                   </span>
                 </div>
                 {shipping > 0 && (
                   <p className="text-sm text-gray-600">
-                    Free shipping on orders over $50
+                    Free shipping on orders over ₹500
                   </p>
                 )}
                 <hr />
                 <div className="flex justify-between font-semibold text-lg">
                   <span>Total</span>
-                  <span>${total.toFixed(2)}</span>
+                  <span>₹{total.toFixed(2)}</span>
                 </div>
                 <Button className="w-full bg-amber-600 hover:bg-amber-700" asChild>
                   <Link to="/checkout">

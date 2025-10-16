@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Order } from '@/types';
-import { useOrders } from '@/contexts/OrdersContext';
+import { useAdminOrders } from '@/contexts/AdminOrdersContext';
 import { Calendar, MapPin, Package, User, Phone, Mail, CreditCard, DollarSign } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
@@ -17,7 +17,7 @@ interface OrderDetailsModalProps {
 }
 
 export const OrderDetailsModal = ({ order, isOpen, onClose }: OrderDetailsModalProps) => {
-  const { updateOrderDiscount } = useOrders();
+  const { updateOrder } = useAdminOrders();
   const [discount, setDiscount] = useState(order?.discount || 0);
   
   if (!order) return null;
@@ -34,10 +34,10 @@ export const OrderDetailsModal = ({ order, isOpen, onClose }: OrderDetailsModalP
       });
       return;
     }
-    updateOrderDiscount(order.id, discount);
+    updateOrder(order.id, { discount });
     toast({
       title: "Discount Updated",
-      description: `Discount of $${discount.toFixed(2)} applied to order #${order.id}`,
+      description: `Discount of ₹${discount.toFixed(2)} applied to order #${order.id}`,
     });
   };
 
@@ -133,11 +133,11 @@ export const OrderDetailsModal = ({ order, isOpen, onClose }: OrderDetailsModalP
                     <p className="text-sm text-gray-600 line-clamp-2">{item.product.description}</p>
                     <div className="flex items-center gap-4 mt-1">
                       <span className="text-sm text-gray-500">Qty: {item.quantity}</span>
-                      <span className="text-sm font-medium">${item.product.price.toFixed(2)} each</span>
+                      <span className="text-sm font-medium">₹{item.product.price.toFixed(2)} each</span>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="font-semibold">${(item.product.price * item.quantity).toFixed(2)}</p>
+                    <p className="font-semibold">₹{(item.product.price * item.quantity).toFixed(2)}</p>
                   </div>
                 </div>
               ))}
@@ -172,7 +172,7 @@ export const OrderDetailsModal = ({ order, isOpen, onClose }: OrderDetailsModalP
                 </Button>
               </div>
               <p className="text-xs text-gray-600">
-                Current discount: ${(order.discount || 0).toFixed(2)}
+                Current discount: ₹{(order.discount || 0).toFixed(2)}
               </p>
             </div>
           </div>
@@ -185,22 +185,22 @@ export const OrderDetailsModal = ({ order, isOpen, onClose }: OrderDetailsModalP
             <div className="bg-gray-50 p-4 rounded-lg space-y-2">
               <div className="flex justify-between text-sm">
                 <span>Subtotal:</span>
-                <span>${subtotal.toFixed(2)}</span>
+                <span>₹{subtotal.toFixed(2)}</span>
               </div>
               {order.discount && order.discount > 0 && (
                 <div className="flex justify-between text-sm text-green-600">
                   <span>Discount:</span>
-                  <span>-${order.discount.toFixed(2)}</span>
+                  <span>-₹{order.discount.toFixed(2)}</span>
                 </div>
               )}
               <div className="flex justify-between text-sm">
                 <span>Delivery Fee:</span>
-                <span>$0.00</span>
+                <span>₹0.00</span>
               </div>
               <Separator />
               <div className="flex justify-between font-semibold">
                 <span>Total:</span>
-                <span>${finalTotal.toFixed(2)}</span>
+                <span>₹{finalTotal.toFixed(2)}</span>
               </div>
               {order.paymentMethod && (
                 <>

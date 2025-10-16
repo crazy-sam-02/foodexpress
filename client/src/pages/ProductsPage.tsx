@@ -128,7 +128,7 @@ const ProductsPage = () => {
               <CardContent className="p-2 sm:p-4">
                 <div className="flex justify-between items-start mb-1 sm:mb-2">
                   <h3 className="text-xs sm:text-base font-semibold text-gray-900 truncate">{product.name}</h3>
-                  <span className="text-sm sm:text-lg font-bold text-amber-600">${product.price}</span>
+                  <span className="text-sm sm:text-lg font-bold text-amber-600">₹{product.price}</span>
                 </div>
                 <p className="text-xs sm:text-sm text-gray-600 mb-2 sm:mb-3 line-clamp-2 hidden sm:block">{product.description}</p>
                 

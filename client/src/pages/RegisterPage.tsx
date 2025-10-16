@@ -26,7 +26,7 @@ const RegisterPage = () => {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const { register } = useUser();
+  const { register, loginWithFirebaseIdToken } = useUser();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -53,7 +53,8 @@ const RegisterPage = () => {
     setIsLoading(false);
 
     if (success) {
-      navigate('/');
+      const q = new URLSearchParams({ email: formData.email.trim() }).toString();
+      navigate(`/check-email?${q}`);
     }
   };
 
@@ -62,11 +63,16 @@ const RegisterPage = () => {
     try {
       const result = await signInWithPopup(auth, googleProvider);
       const idToken = await result.user.getIdToken();
-      // This part needs to be implemented in the backend
-      // For now, we'll just log the user in on the client
-      // after a successful Google login.
-      console.log('Google signup successful, but backend integration is needed.');
-      toast.info('Google signup is not fully implemented yet.');
+      
+      const success = await loginWithFirebaseIdToken(
+        idToken,
+        result.user.displayName,
+        result.user.email
+      );
+
+      if (success) {
+        navigate('/');
+      }
     } catch (error) {
       console.error('Google signup error:', error);
       toast.error('Google signup failed.');

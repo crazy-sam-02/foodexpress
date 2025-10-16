@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { Order } from '@/types';
 import { useUser } from './UserContext';
 import { toast } from 'sonner';
+import { config } from '@/lib/config';
 
 interface OrdersContextType {
   orders: Order[];
@@ -30,13 +31,13 @@ interface OrdersProviderProps {
 
 export const OrdersProvider: React.FC<OrdersProviderProps> = ({ children }) => {
   const [orders, setOrders] = useState<Order[]>([]);
-  const { user, token } = useUser();
+  const { user, token, logout } = useUser();
 
   useEffect(() => {
     const fetchOrders = async () => {
       if (user && token) {
         try {
-          const response = await fetch('http://localhost:5000/api/orders', {
+          const response = await fetch(`${config.API_URL}/orders`, {
             headers: {
               'Authorization': `Bearer ${token}`,
             },
@@ -60,6 +61,11 @@ export const OrdersProvider: React.FC<OrdersProviderProps> = ({ children }) => {
                 paymentMethod: order.paymentMethod
               })));
             }
+          } else if (response.status === 401) {
+            // Token may be invalid/expired; clear client auth to stop repeated 401s
+            console.warn('Orders fetch unauthorized, clearing user session');
+            await logout();
+            toast.error('Session expired. Please login again.');
           }
         } catch (error) {
           console.error('Error fetching orders:', error);
@@ -71,27 +77,33 @@ export const OrdersProvider: React.FC<OrdersProviderProps> = ({ children }) => {
   }, [user, token]);
 
   const addOrder = async (orderData: Omit<Order, 'id'>) => {
-    if (!token) {
+    if (!user || !token) {
       toast.error('You must be logged in to place an order');
       return null;
     }
 
     try {
-      // Extract only product IDs from cart items
+      // Extract only product IDs from cart items and ensure they're valid
       const backendOrderData = {
         items: orderData.items.map(item => ({
-          product: item.product._id || item.product.id, // Send only the ID
+          product: item.product._id, // Use MongoDB ObjectId
           quantity: item.quantity
-        })),
+        })).filter(item => item.product), // Filter out any items with invalid IDs
         total: orderData.total,
         deliveryAddress: orderData.deliveryAddress,
         notes: orderData.notes || '',
         paymentMethod: orderData.paymentMethod
       };
 
+      // Validate order data before sending
+      if (!backendOrderData.items.length) {
+        toast.error('No valid items in the order');
+        return null;
+      }
+
       console.log('Sending order to backend:', backendOrderData);
 
-      const response = await fetch('http://localhost:5000/api/orders', {
+      const response = await fetch(`${config.API_URL}/orders`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -103,12 +115,33 @@ export const OrdersProvider: React.FC<OrdersProviderProps> = ({ children }) => {
       const data = await response.json();
       console.log('Backend response:', data);
 
-      if (response.ok && data.success) {
+      if (!response.ok) {
+        const errorMessage = data.message || 'Failed to place order. Please try again.';
+        console.error('Order placement failed:', errorMessage);
+        
+        if (response.status === 401) {
+          toast.error('Session expired. Please login again.');
+          // Optional: Trigger a logout or session refresh here
+        } else if (response.status === 400) {
+          toast.error(errorMessage);
+        } else {
+          toast.error('An error occurred while placing your order. Please try again.');
+        }
+        return null;
+      }
+
+      if (!data.success || !data.order) {
+        console.error('Invalid response format:', data);
+        toast.error('Something went wrong. Please try again.');
+        return null;
+      }
+
+      try {
         const newOrder: Order = {
-          id: data.order.id,
+          id: data.order._id || data.order.id,
           userId: data.order.userId,
           items: data.order.items.map((item: any) => ({
-            id: item.product._id,
+            id: item.product._id || item.product.id,
             product: item.product,
             quantity: item.quantity
           })),
@@ -116,16 +149,16 @@ export const OrdersProvider: React.FC<OrdersProviderProps> = ({ children }) => {
           status: data.order.status,
           orderDate: data.order.orderDate,
           deliveryAddress: data.order.deliveryAddress,
-          notes: data.order.notes,
+          notes: data.order.notes || '',
           paymentMethod: data.order.paymentMethod
         };
         
         setOrders(prev => [newOrder, ...prev]);
+        toast.success('Order placed successfully!');
         return newOrder;
-      } else {
-        const errorMessage = data.message || 'Failed to place order';
-        console.error('Order placement failed:', errorMessage);
-        toast.error(errorMessage);
+      } catch (error) {
+        console.error('Error processing order response:', error);
+        toast.error('Error processing order response');
         return null;
       }
     } catch (error) {
@@ -142,7 +175,7 @@ export const OrdersProvider: React.FC<OrdersProviderProps> = ({ children }) => {
     }
 
     try {
-      const response = await fetch(`http://localhost:5000/api/orders/${orderId}/status`, {
+      const response = await fetch(`${config.API_URL}/orders/${orderId}/status`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

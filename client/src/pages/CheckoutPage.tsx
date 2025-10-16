@@ -36,7 +36,7 @@ const CheckoutPage = () => {
 
   const subtotal = getCartTotal();
   const tax = subtotal * 0.08;
-  const shipping = subtotal > 50 ? 0 : 5.99;
+  const shipping = subtotal > 500 ? 0 : 499;
   const total = subtotal + tax + shipping;
 
   const handleInputChange = (field: string, value: string) => {
@@ -88,14 +88,14 @@ const CheckoutPage = () => {
       const calculatedSubtotal = Number(cartItems.reduce((sum, item) => 
         sum + (item.product.price * item.quantity), 0).toFixed(2));
       const calculatedTax = Number((calculatedSubtotal * 0.08).toFixed(2));
-      const calculatedShipping = calculatedSubtotal > 50 ? 0 : 5.99;
+      const calculatedShipping = calculatedSubtotal > 500 ? 0 : 499;
       const calculatedTotal = Number((calculatedSubtotal + calculatedTax + calculatedShipping).toFixed(2));
 
       // Create order object
       const orderData: Omit<Order, 'id'> = {
         userId: user?.id || 'guest',
         items: cartItems.map(item => ({
-          id: item.product._id || item.product.id,
+          id: item.product._id,
           product: item.product,
           quantity: item.quantity
         })),
@@ -379,7 +379,7 @@ const CheckoutPage = () => {
                         <p className="font-medium text-sm truncate">{item.product.name}</p>
                         <p className="text-sm text-gray-600">Qty: {item.quantity}</p>
                       </div>
-                      <p className="font-medium text-sm">${(item.product.price * item.quantity).toFixed(2)}</p>
+                      <p className="font-medium text-sm">₹{(item.product.price * item.quantity).toFixed(2)}</p>
                     </div>
                   ))}
                 </div>
@@ -390,11 +390,11 @@ const CheckoutPage = () => {
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <span>Subtotal</span>
-                    <span>${subtotal.toFixed(2)}</span>
+                    <span>₹{subtotal.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Tax</span>
-                    <span>${tax.toFixed(2)}</span>
+                    <span>₹{tax.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="flex items-center gap-2">
@@ -405,13 +405,13 @@ const CheckoutPage = () => {
                       {shipping === 0 ? (
                         <Badge className="bg-green-100 text-green-800">Free</Badge>
                       ) : (
-                        `$${shipping.toFixed(2)}`
+                        `₹${shipping.toFixed(2)}`
                       )}
                     </span>
                   </div>
                   {shipping > 0 && (
                     <p className="text-sm text-gray-600">
-                      Free delivery on orders over $50
+                      Free delivery on orders over ₹500
                     </p>
                   )}
                 </div>
@@ -420,7 +420,7 @@ const CheckoutPage = () => {
 
                 <div className="flex justify-between font-semibold text-lg">
                   <span>Total</span>
-                  <span>${total.toFixed(2)}</span>
+                  <span>₹{total.toFixed(2)}</span>
                 </div>
 
                 <Button 

@@ -40,11 +40,11 @@ const FAQPage = () => {
     },
     {
       question: "What is your minimum order amount?",
-      answer: "There is no minimum order amount. However, orders over $50 qualify for free delivery within city limits."
+      answer: "There is no minimum order amount. However, orders over ₹500 qualify for free delivery within city limits."
     },
     {
       question: "Do you offer gift wrapping?",
-      answer: "Yes, we offer complimentary gift wrapping for orders over $30. You can select this option during checkout."
+      answer: "Yes, we offer complimentary gift wrapping for orders over ₹2500. You can select this option during checkout."
     },
     {
       question: "How far in advance should I order a custom cake?",

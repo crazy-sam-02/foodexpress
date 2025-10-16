@@ -196,7 +196,7 @@ const AdminProductsPage = () => {
                         <Badge variant="secondary">{product.category}</Badge>
                       </TableCell>
                       <TableCell>
-                        <span className="font-medium">${product.price}</span>
+                        <span className="font-medium">₹{product.price}</span>
                       </TableCell>
                       <TableCell>
                         <Badge 

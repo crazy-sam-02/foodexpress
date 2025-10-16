@@ -1,6 +1,6 @@
 
 export interface Product {
-  id: number;
+  _id: string; // MongoDB ObjectId as string
   name: string;
   description: string;
   price: number;
@@ -10,41 +10,52 @@ export interface Product {
   rating: number;
   reviews: number;
   tags: string[];
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface CartItem {
-  id: number;
+  id: string; // Use string ID for consistency
   product: Product;
   quantity: number;
+  // price stored on cart item (price at time of add). Optional for backwards compatibility
+  price?: number;
 }
 
 export interface User {
-  id: number;
+  id: string; // MongoDB ObjectId as string
   email: string;
   name: string;
-  role: 'customer' | 'admin';
+  isAdmin?: boolean;
   address?: string;
   phone?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Order {
-  id: string;
+  id: string; // MongoDB ObjectId as string
   userId: string;
   items: CartItem[];
   total: number;
-  status: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'delivered' | 'cancelled';
+  status: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'delivered' | 'cancelled' | 'processing' | 'shipped';
   orderDate: string;
   deliveryDate?: string;
   deliveryAddress: string;
   notes?: string;
   paymentMethod?: 'cash' | 'card' | 'paypal' | 'upi';
   discount?: number;
+  orderAction?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Category {
-  id: number;
+  _id: string; // MongoDB ObjectId as string
   name: string;
   description: string;
   image: string;
   productCount: number;
+  createdAt?: string;
+  updatedAt?: string;
 }

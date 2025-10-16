@@ -15,6 +15,7 @@ import Index from "./pages/Index";
 import ProductsPage from "./pages/ProductsPage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
+import CheckEmailPage from "./pages/CheckEmailPage";
 import CartPage from "./pages/CartPage";
 import CheckoutPage from "./pages/CheckoutPage";
 import CategoriesPage from "./pages/CategoriesPage";
@@ -31,6 +32,7 @@ import AdminSalesPage from "./pages/AdminSalesPage";
 import AdminAddProductPage from "./pages/AdminAddProductPage";
 import AdminCategoriesPage from "./pages/AdminCategoriesPage";
 import AdminOrdersPage from "./pages/AdminOrdersPage";
+import { AdminOrdersProvider } from "@/contexts/AdminOrdersContext";
 import AdminNotificationsPage from "./pages/AdminNotificationsPage";
 import OrdersPage from "./pages/OrdersPage";
 import FAQPage from "./pages/FAQPage";
@@ -59,6 +61,7 @@ const App = () => (
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/check-email" element={<CheckEmailPage />} />
           <Route path="/cart" element={<><CartPage /></>} />
           <Route path="/checkout" element={<><CheckoutPage /></>} />
           <Route path="/order-success" element={<><OrderSuccessPage /></>} />
@@ -71,13 +74,13 @@ const App = () => (
           
           {/* Admin Routes */}
           <Route path="/admin/login" element={<AdminLoginPage />} />
-          <Route path="/admin/dashboard" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
-          <Route path="/admin/products" element={<AdminRoute><AdminProductsPage /></AdminRoute>} />
-          <Route path="/admin/categories" element={<AdminRoute><AdminCategoriesPage /></AdminRoute>} />
-          <Route path="/admin/orders" element={<AdminRoute><AdminOrdersPage /></AdminRoute>} />
-          <Route path="/admin/sales" element={<AdminRoute><AdminSalesPage /></AdminRoute>} />
-          <Route path="/admin/notifications" element={<AdminRoute><AdminNotificationsPage /></AdminRoute>} />
-          <Route path="/admin/add-product" element={<AdminRoute><AdminAddProductPage /></AdminRoute>} />
+          <Route path="/admin/dashboard" element={<AdminRoute><AdminOrdersProvider><AdminDashboard /></AdminOrdersProvider></AdminRoute>} />
+          <Route path="/admin/products" element={<AdminRoute><AdminOrdersProvider><AdminProductsPage /></AdminOrdersProvider></AdminRoute>} />
+          <Route path="/admin/categories" element={<AdminRoute><AdminOrdersProvider><AdminCategoriesPage /></AdminOrdersProvider></AdminRoute>} />
+          <Route path="/admin/orders" element={<AdminRoute><AdminOrdersProvider><AdminOrdersPage /></AdminOrdersProvider></AdminRoute>} />
+          <Route path="/admin/sales" element={<AdminRoute><AdminOrdersProvider><AdminSalesPage /></AdminOrdersProvider></AdminRoute>} />
+          <Route path="/admin/notifications" element={<AdminRoute><AdminOrdersProvider><AdminNotificationsPage /></AdminOrdersProvider></AdminRoute>} />
+          <Route path="/admin/add-product" element={<AdminRoute><AdminOrdersProvider><AdminAddProductPage /></AdminOrdersProvider></AdminRoute>} />
           
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />

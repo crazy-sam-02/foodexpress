@@ -23,7 +23,7 @@ const OrdersPage = () => {
                     <div>
                       <h3 className="font-semibold">Order Details</h3>
                       <p><strong>Order Date:</strong> {new Date(order.orderDate).toLocaleDateString()}</p>
-                      <p><strong>Total:</strong> ${order.total.toFixed(2)}</p>
+                      <p><strong>Total:</strong> ₹{order.total.toFixed(2)}</p>
                       <p><strong>Payment Method:</strong> {order.paymentMethod}</p>
                       <p><strong>Delivery Address:</strong> {order.deliveryAddress}</p>
                     </div>
@@ -31,9 +31,9 @@ const OrdersPage = () => {
                       <h3 className="font-semibold">Items</h3>
                       <ul className="space-y-2">
                         {order.items.map(item => (
-                          <li key={item.product.id} className="flex justify-between">
+                          <li key={item.product._id} className="flex justify-between">
                             <span>{item.product.name} (x{item.quantity})</span>
-                            <span>${(item.product.price * item.quantity).toFixed(2)}</span>
+                            <span>₹{(item.product.price * item.quantity).toFixed(2)}</span>
                           </li>
                         ))}
                       </ul>

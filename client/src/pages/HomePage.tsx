@@ -61,7 +61,7 @@ const HomePage = () => {
             {topCategories.length > 0 ? (
               topCategories.map((category) => (
                 <Link
-                  key={category?.id || category?.name}
+                  key={category?._id || category?.name}
                   to={`/products?category=${encodeURIComponent(category?.name || '')}`}
                 >
                   <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
@@ -114,7 +114,7 @@ const HomePage = () => {
             {featuredProducts.length > 0 ? (
               featuredProducts.map((product) => (
                 <Card
-                  key={product?.id || product?.name}
+                  key={product?._id || product?.name}
                   className="hover:shadow-lg transition-shadow"
                 >
                   <div className="aspect-square overflow-hidden rounded-t-lg relative">

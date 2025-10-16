@@ -4,11 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Calendar, TrendingUp, DollarSign, ShoppingBag } from 'lucide-react';
-import { useOrders } from '@/contexts/OrdersContext';
+import { useAdminOrders } from '@/contexts/AdminOrdersContext';
 
 const AdminSalesPage = () => {
   const [selectedPeriod, setSelectedPeriod] = useState('daily');
-  const { orders } = useOrders();
+  const { orders } = useAdminOrders();
 
   const salesData = useMemo(() => {
     const now = new Date();
@@ -151,7 +151,7 @@ const AdminSalesPage = () => {
                 <div>
                   <p className="text-sm font-medium text-gray-600">Total Sales</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    ${currentData.totalSales.toLocaleString()}
+                    ₹{currentData.totalSales.toLocaleString()}
                   </p>
                   <p className="text-sm text-green-600">
                     {selectedPeriod === 'daily' ? 'Today' : 
@@ -186,7 +186,7 @@ const AdminSalesPage = () => {
                 <div>
                   <p className="text-sm font-medium text-gray-600">Avg Order Value</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    ${currentData.avgOrderValue.toFixed(2)}
+                    ₹{currentData.avgOrderValue.toFixed(2)}
                   </p>
                   <p className="text-sm text-purple-600">Per order</p>
                 </div>
@@ -215,7 +215,7 @@ const AdminSalesPage = () => {
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="font-semibold text-gray-900">${product.revenue.toFixed(2)}</p>
+                      <p className="font-semibold text-gray-900">₹{product.revenue.toFixed(2)}</p>
                       <p className="text-sm text-gray-500">Revenue</p>
                     </div>
                   </div>
@@ -244,7 +244,7 @@ const AdminSalesPage = () => {
                       <p className="text-sm text-gray-500">{order.time}</p>
                     </div>
                     <div className="text-right">
-                      <p className="font-semibold text-gray-900">${order.total}</p>
+                      <p className="font-semibold text-gray-900">₹{order.total}</p>
                       <p className="text-sm text-gray-500">{order.items} items</p>
                     </div>
                   </div>

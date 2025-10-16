@@ -248,7 +248,7 @@ const AdminAddProductPage = () => {
                   )}
                   <div className="flex items-center gap-2 mt-2">
                     {formData.price && (
-                      <span className="font-bold text-amber-600">${formData.price}</span>
+                      <span className="font-bold text-amber-600">₹{formData.price}</span>
                     )}
                     {formData.category && (
                       <span className="px-2 py-1 bg-gray-200 text-gray-700 text-xs rounded">

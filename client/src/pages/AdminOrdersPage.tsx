@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { OrderDetailsModal } from '@/components/admin/OrderDetailsModal';
-import { useOrders } from '@/contexts/OrdersContext';
+import { useAdminOrders } from '@/contexts/AdminOrdersContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -24,7 +24,7 @@ import { Order } from '@/types';
 import { ShoppingCart, Calendar, MapPin, Phone, Mail, Package } from 'lucide-react';
 
 const AdminOrdersPage = () => {
-  const { orders, updateOrderStatus } = useOrders();
+  const { orders, updateOrder } = useAdminOrders();
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
@@ -46,7 +46,7 @@ const AdminOrdersPage = () => {
   };
 
   const handleStatusChange = (orderId: string, newStatus: Order['status']) => {
-    updateOrderStatus(orderId, newStatus);
+    updateOrder(orderId, { status: newStatus });
   };
 
   const handleOrderClick = (order: Order) => {
@@ -178,7 +178,7 @@ const AdminOrdersPage = () => {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell className="font-medium">${order.total.toFixed(2)}</TableCell>
+                      <TableCell className="font-medium">₹{order.total.toFixed(2)}</TableCell>
                       <TableCell>
                         <Badge className={getStatusColor(order.status)}>
                           {order.status}

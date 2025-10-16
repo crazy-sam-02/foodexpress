@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, setPersistence, browserLocalPersistence } from 'firebase/auth';
 
 const firebaseConfig = {
   apiKey: "AIzaSyBxL1JlO0bhtLSf9t1mvvvK1cGDTZIYwzk",
@@ -16,6 +16,9 @@ const app = initializeApp(firebaseConfig);
 
 // Initialize Firebase Authentication
 export const auth = getAuth(app);
+
+// Set persistence to LOCAL (survives browser restarts)
+setPersistence(auth, browserLocalPersistence).catch(console.error);
 
 // Initialize Google Auth Provider
 export const googleProvider = new GoogleAuthProvider();
