@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ShoppingCart, User, Menu, X, Bell, Package } from 'lucide-react';
+import { ShoppingCart, User, Menu, X, Bell, Package, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/contexts/CartContext';
 
@@ -51,6 +51,16 @@ export const Header = () => {
 
           {/* Right side actions */}
           <div className="flex items-center space-x-4">
+            {/* Medicine/Health Section */}
+            <Link to="/medicine">
+              <Button 
+                className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white font-medium px-4 py-2 rounded-full shadow-lg transition-all duration-300 transform hover:scale-105"
+              >
+                <Heart className="h-4 w-4 mr-2" />
+                Medicine
+              </Button>
+            </Link>
+
             {/* Orders */}
             <Link to="/orders">
               <Button variant="ghost" size="icon" className="text-amber-700 hover:text-amber-900">
@@ -113,6 +123,14 @@ export const Header = () => {
                 </Link>
               ))}
               <div className="border-t border-amber-200 pt-2 mt-2">
+                <Link
+                  to="/medicine"
+                  className="bg-gradient-to-r from-green-500 to-blue-500 text-white py-3 px-4 rounded-lg transition-all flex items-center gap-2 font-medium shadow-md mb-2"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <Heart className="h-4 w-4" />
+                  Medicine & Health
+                </Link>
                 <Link
                   to="/orders"
                   className="text-amber-700 hover:text-amber-900 py-2 px-4 rounded transition-colors flex items-center gap-2"
