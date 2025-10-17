@@ -4,14 +4,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Heart, Pill, Stethoscope, ShieldCheck, Clock, Star, Search, Plus } from 'lucide-react';
-import { useCart } from '@/contexts/CartContext';
+import { Heart, Pill, Stethoscope, ShieldCheck, Clock, Star, Search, Phone, PhoneCall, MessageCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 const MedicinePage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
-  const { addToCart } = useCart();
+  
+  // Phone ordering constants
+  const PHARMACY_PHONE = "+91-9876543210";
+  const WHATSAPP_NUMBER = "+919876543210";
 
   const categories = ['All', 'Pain Relief', 'Cold & Flu', 'Vitamins', 'First Aid', 'Prescription'];
 
@@ -109,14 +111,17 @@ const MedicinePage = () => {
     (selectedCategory === 'All' || medicine.category === selectedCategory)
   );
 
-  const handleAddToCart = (medicine: any) => {
-    if (medicine.requiresPrescription) {
-      toast.error('This item requires a prescription. Please consult with a healthcare provider.');
-      return;
-    }
-    
-    addToCart(medicine, 1);
-    toast.success(`${medicine.name} added to cart`);
+  const handlePhoneOrder = (medicine: any) => {
+    const message = `Hello, I would like to order ${medicine.name} - ₹${medicine.price}. ${medicine.requiresPrescription ? 'I have a prescription.' : 'No prescription required.'}`;
+    window.open(`tel:${PHARMACY_PHONE}`);
+    toast.success('Calling pharmacy for order assistance...');
+  };
+
+  const handleWhatsAppOrder = (medicine: any) => {
+    const message = `Hello, I would like to order ${medicine.name} - ₹${medicine.price}. ${medicine.requiresPrescription ? 'I have a prescription.' : 'No prescription required.'}`;
+    const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank');
+    toast.success('Opening WhatsApp for order...');
   };
 
   return (
@@ -134,7 +139,7 @@ const MedicinePage = () => {
               <h1 className="text-4xl font-bold mb-4">Medicine & Health</h1>
               <p className="text-xl text-green-100 max-w-2xl mx-auto">
                 Your trusted source for medicines, health products, and wellness essentials. 
-                Fast delivery with proper storage and handling.
+                Order by phone with expert pharmacist consultation and fast delivery.
               </p>
             </div>
           </div>
@@ -149,8 +154,8 @@ const MedicinePage = () => {
                 <h3 className="font-semibold text-orange-800">Important Health Notice</h3>
               </div>
               <p className="text-orange-700 text-sm">
-                <strong>Prescription medicines require valid prescription.</strong> Over-the-counter medicines are available for immediate purchase. 
-                Always consult healthcare professionals for medical advice. This service does not replace professional medical consultation.
+                <strong>Prescription medicines require valid prescription.</strong> All orders are placed via phone or WhatsApp for safety and verification. 
+                Our pharmacists will guide you through the ordering process. Always consult healthcare professionals for medical advice.
               </p>
             </CardContent>
           </Card>
@@ -207,6 +212,70 @@ const MedicinePage = () => {
             </Card>
           </div>
 
+          {/* Phone Ordering Section */}
+          <Card className="mb-8 bg-gradient-to-r from-green-50 to-blue-50 border-green-200">
+            <CardContent className="p-8">
+              <div className="text-center">
+                <div className="flex justify-center mb-4">
+                  <div className="bg-green-100 p-4 rounded-full">
+                    <PhoneCall className="h-8 w-8 text-green-600" />
+                  </div>
+                </div>
+                <h2 className="text-2xl font-bold text-gray-800 mb-4">Order by Phone</h2>
+                <p className="text-gray-600 mb-6 max-w-2xl mx-auto">
+                  Prefer to speak with our pharmacists directly? Call us or message us on WhatsApp to place your medicine order. 
+                  Our experts will help you with prescription validation, dosage guidance, and ensure safe delivery.
+                </p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto">
+                  <div className="bg-white p-6 rounded-lg shadow-sm border border-green-100">
+                    <Phone className="h-8 w-8 text-green-600 mx-auto mb-3" />
+                    <h3 className="font-semibold text-gray-800 mb-2">Call Directly</h3>
+                    <p className="text-sm text-gray-600 mb-4">Speak with our pharmacist</p>
+                    <Button 
+                      onClick={() => {
+                        window.open(`tel:${PHARMACY_PHONE}`);
+                        toast.success('Calling pharmacy...');
+                      }}
+                      className="w-full bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      <Phone className="h-4 w-4 mr-2" />
+                      Call {PHARMACY_PHONE}
+                    </Button>
+                  </div>
+                  
+                  <div className="bg-white p-6 rounded-lg shadow-sm border border-green-100">
+                    <MessageCircle className="h-8 w-8 text-green-600 mx-auto mb-3" />
+                    <h3 className="font-semibold text-gray-800 mb-2">WhatsApp Order</h3>
+                    <p className="text-sm text-gray-600 mb-4">Quick messaging service</p>
+                    <Button 
+                      onClick={() => {
+                        const message = "Hello! I would like to inquire about medicine ordering.";
+                        const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
+                        window.open(whatsappUrl, '_blank');
+                        toast.success('Opening WhatsApp...');
+                      }}
+                      className="w-full bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white"
+                    >
+                      <MessageCircle className="h-4 w-4 mr-2" />
+                      Message on WhatsApp
+                    </Button>
+                  </div>
+                </div>
+                
+                <div className="mt-6 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                  <div className="flex items-center justify-center gap-2 mb-2">
+                    <ShieldCheck className="h-5 w-5 text-yellow-600" />
+                    <span className="font-medium text-yellow-800">Available 24/7</span>
+                  </div>
+                  <p className="text-sm text-yellow-700">
+                    Emergency medicine orders accepted round the clock. Prescription medicines require valid prescription upload via WhatsApp.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Medicine Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredMedicines.map((medicine) => (
@@ -246,14 +315,24 @@ const MedicinePage = () => {
                     <span className="text-2xl font-bold text-green-600">
                       ₹{medicine.price}
                     </span>
-                    <Button
-                      onClick={() => handleAddToCart(medicine)}
-                      className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600"
-                      disabled={medicine.requiresPrescription}
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      {medicine.requiresPrescription ? 'Rx Required' : 'Add to Cart'}
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={() => handlePhoneOrder(medicine)}
+                        className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white"
+                        size="sm"
+                      >
+                        <Phone className="h-4 w-4 mr-1" />
+                        Call
+                      </Button>
+                      <Button
+                        onClick={() => handleWhatsAppOrder(medicine)}
+                        className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white"
+                        size="sm"
+                      >
+                        <MessageCircle className="h-4 w-4 mr-1" />
+                        WhatsApp
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
