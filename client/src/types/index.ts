@@ -10,6 +10,10 @@ export interface Product {
   rating: number;
   reviews: number;
   tags: string[];
+  // Medicine-specific fields
+  requiresPrescription?: boolean;
+  manufacturer?: string;
+  productType?: 'food' | 'medicine';
   createdAt?: string;
   updatedAt?: string;
 }

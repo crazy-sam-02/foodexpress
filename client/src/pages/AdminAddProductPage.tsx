@@ -24,6 +24,9 @@ const AdminAddProductPage = () => {
     image: '',
     tags: '',
     inStock: true,
+    productType: 'food' as 'food' | 'medicine',
+    requiresPrescription: false,
+    manufacturer: '',
   });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -47,9 +50,14 @@ const AdminAddProductPage = () => {
       description: formData.description,
       price: parseFloat(formData.price),
       category: formData.category,
-      image: formData.image || "https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=400&h=300&fit=crop",
+      image: formData.image || (formData.productType === 'medicine' 
+        ? "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400&h=300&fit=crop"
+        : "https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=400&h=300&fit=crop"),
       inStock: formData.inStock,
-      tags: formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag)
+      tags: formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag),
+      productType: formData.productType,
+      requiresPrescription: formData.requiresPrescription,
+      manufacturer: formData.manufacturer,
     });
 
     toast({
@@ -76,7 +84,7 @@ const AdminAddProductPage = () => {
           </Button>
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Add New Product</h1>
-            <p className="text-gray-600 mt-2">Add a new item to your bakery inventory</p>
+            <p className="text-gray-600 mt-2">Add a new food or medicine item to your inventory</p>
           </div>
         </div>
 
@@ -130,6 +138,21 @@ const AdminAddProductPage = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
+                  <Label htmlFor="productType">Product Type *</Label>
+                  <select
+                    id="productType"
+                    name="productType"
+                    value={formData.productType}
+                    onChange={(e) => setFormData(prev => ({ ...prev, productType: e.target.value as 'food' | 'medicine' }))}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    required
+                  >
+                    <option value="food">Food Product</option>
+                    <option value="medicine">Medicine Product</option>
+                  </select>
+                </div>
+
+                <div className="space-y-2">
                   <Label htmlFor="category">Category *</Label>
                   <select
                     id="category"
@@ -147,7 +170,39 @@ const AdminAddProductPage = () => {
                     ))}
                   </select>
                 </div>
+              </div>
 
+              {/* Medicine-specific fields */}
+              {formData.productType === 'medicine' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-green-50 rounded-lg border border-green-200">
+                  <div className="space-y-2">
+                    <Label htmlFor="manufacturer">Manufacturer</Label>
+                    <Input
+                      id="manufacturer"
+                      name="manufacturer"
+                      value={formData.manufacturer}
+                      onChange={handleInputChange}
+                      placeholder="e.g., HealthCorp, PharmaCare"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="requiresPrescription">Prescription Required</Label>
+                    <select
+                      id="requiresPrescription"
+                      name="requiresPrescription"
+                      value={formData.requiresPrescription.toString()}
+                      onChange={(e) => setFormData(prev => ({ ...prev, requiresPrescription: e.target.value === 'true' }))}
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    >
+                      <option value="false">Over-the-Counter (OTC)</option>
+                      <option value="true">Prescription Required</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="inStock">Stock Status</Label>
                   <select

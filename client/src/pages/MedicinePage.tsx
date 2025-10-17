@@ -1,15 +1,20 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Heart, Pill, Stethoscope, ShieldCheck, Clock, Star, Search, Phone, PhoneCall, MessageCircle } from 'lucide-react';
+import { Heart, Pill, Stethoscope, ShieldCheck, Clock, Star, Search, Phone, PhoneCall, MessageCircle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import api from '@/lib/api';
+import { Product } from '@/types';
 
 const MedicinePage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
+  const [medicines, setMedicines] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
   // Phone ordering constants
   const PHARMACY_PHONE = "+91-9876543210";
@@ -17,93 +22,25 @@ const MedicinePage = () => {
 
   const categories = ['All', 'Pain Relief', 'Cold & Flu', 'Vitamins', 'First Aid', 'Prescription'];
 
-  // Sample medicine data
-  const medicines = [
-    {
-      _id: 'med-1',
-      name: 'Paracetamol 500mg',
-      description: 'Effective pain relief and fever reducer',
-      price: 25.99,
-      category: 'Pain Relief',
-      image: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400&h=300&fit=crop',
-      rating: 4.8,
-      inStock: true,
-      reviews: 124,
-      tags: ['pain-relief', 'fever', 'headache'],
-      requiresPrescription: false,
-      manufacturer: 'HealthCorp'
-    },
-    {
-      _id: 'med-2',
-      name: 'Vitamin D3 Tablets',
-      description: 'Essential vitamin D supplement for bone health',
-      price: 45.50,
-      category: 'Vitamins',
-      image: 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=300&fit=crop',
-      rating: 4.6,
-      inStock: true,
-      reviews: 89,
-      tags: ['vitamins', 'supplements', 'bone-health'],
-      requiresPrescription: false,
-      manufacturer: 'VitaLife'
-    },
-    {
-      _id: 'med-3',
-      name: 'Cough Syrup',
-      description: 'Fast-acting cough relief syrup',
-      price: 35.75,
-      category: 'Cold & Flu',
-      image: 'https://images.unsplash.com/photo-1576671081837-49000212a370?w=400&h=300&fit=crop',
-      rating: 4.4,
-      inStock: true,
-      reviews: 67,
-      tags: ['cough', 'cold', 'flu'],
-      requiresPrescription: false,
-      manufacturer: 'MediCure'
-    },
-    {
-      _id: 'med-4',
-      name: 'First Aid Kit',
-      description: 'Complete first aid kit for emergencies',
-      price: 125.99,
-      category: 'First Aid',
-      image: 'https://images.unsplash.com/photo-1603398938059-e8bb4d2bb74e?w=400&h=300&fit=crop',
-      rating: 4.9,
-      inStock: true,
-      reviews: 156,
-      tags: ['first-aid', 'emergency', 'bandages'],
-      requiresPrescription: false,
-      manufacturer: 'SafeGuard'
-    },
-    {
-      _id: 'med-5',
-      name: 'Antibiotic Cream',
-      description: 'Topical antibiotic for wound care',
-      price: 18.25,
-      category: 'First Aid',
-      image: 'https://images.unsplash.com/photo-1585435557343-3b092031d8d8?w=400&h=300&fit=crop',
-      rating: 4.7,
-      inStock: true,
-      reviews: 43,
-      tags: ['antibiotic', 'wound-care', 'topical'],
-      requiresPrescription: true,
-      manufacturer: 'PharmaCare'
-    },
-    {
-      _id: 'med-6',
-      name: 'Multivitamin Gummies',
-      description: 'Delicious gummy vitamins for daily nutrition',
-      price: 55.99,
-      category: 'Vitamins',
-      image: 'https://images.unsplash.com/photo-1556909114-4f6e5d7d3a5f?w=400&h=300&fit=crop',
-      rating: 4.5,
-      inStock: true,
-      reviews: 78,
-      tags: ['vitamins', 'gummies', 'multivitamin'],
-      requiresPrescription: false,
-      manufacturer: 'NutriGummy'
-    }
-  ];
+  // Fetch medicines from backend
+  useEffect(() => {
+    const fetchMedicines = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await api.get('/products?productType=medicine');
+        setMedicines(response.data);
+      } catch (error: any) {
+        console.error('Error fetching medicines:', error);
+        setError('Failed to load medicines. Please try again later.');
+        toast.error('Failed to load medicines');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMedicines();
+  }, []);
 
   const filteredMedicines = medicines.filter(medicine => 
     medicine.inStock &&
@@ -277,6 +214,25 @@ const MedicinePage = () => {
           </Card>
 
           {/* Medicine Grid */}
+          {loading ? (
+            <div className="text-center py-12">
+              <Loader2 className="h-12 w-12 text-green-600 mx-auto mb-4 animate-spin" />
+              <h3 className="text-lg font-semibold text-gray-600 mb-2">Loading medicines...</h3>
+              <p className="text-gray-500">Please wait while we fetch available medicines.</p>
+            </div>
+          ) : error ? (
+            <div className="text-center py-12">
+              <Pill className="h-12 w-12 text-red-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-red-600 mb-2">Error Loading Medicines</h3>
+              <p className="text-red-500 mb-4">{error}</p>
+              <Button 
+                onClick={() => window.location.reload()} 
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                Try Again
+              </Button>
+            </div>
+          ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredMedicines.map((medicine) => (
               <Card key={medicine._id} className="hover:shadow-lg transition-shadow">
@@ -337,14 +293,15 @@ const MedicinePage = () => {
                 </CardContent>
               </Card>
             ))}
+            
+            {filteredMedicines.length === 0 && (
+              <div className="text-center py-12 col-span-full">
+                <Pill className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-gray-600 mb-2">No medicines found</h3>
+                <p className="text-gray-500">Try adjusting your search or filter criteria.</p>
+              </div>
+            )}
           </div>
-
-          {filteredMedicines.length === 0 && (
-            <div className="text-center py-12">
-              <Pill className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-600 mb-2">No medicines found</h3>
-              <p className="text-gray-500">Try adjusting your search or filter criteria.</p>
-            </div>
           )}
         </div>
       </div>

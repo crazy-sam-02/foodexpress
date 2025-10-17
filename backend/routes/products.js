@@ -7,8 +7,25 @@ const router = express.Router();
 // GET all products
 router.get("/", async (req, res) => {
   try {
-    const products = await Product.find();
+    const { productType } = req.query;
+    let query = {};
+    
+    if (productType) {
+      query.productType = productType;
+    }
+    
+    const products = await Product.find(query);
     res.json(products);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// GET medicines only
+router.get("/medicines", async (req, res) => {
+  try {
+    const medicines = await Product.find({ productType: 'medicine' });
+    res.json(medicines);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -38,6 +55,10 @@ router.post("/", async (req, res) => {
       rating: req.body.rating || 0,
       reviews: req.body.reviews || 0,
       tags: req.body.tags || [],
+      // Medicine-specific fields
+      requiresPrescription: req.body.requiresPrescription || false,
+      manufacturer: req.body.manufacturer,
+      productType: req.body.productType || 'food',
     });
 
     const newProduct = await product.save();
