@@ -6,18 +6,26 @@ import { Link } from 'react-router-dom';
 import { useProducts } from '@/contexts/ProductsContext';
 
 const CategoriesPage = () => {
-  const { categories } = useProducts();
+  const { categories, products } = useProducts();
+
+  // Filter categories to only show those used by food products
+  const foodCategories = categories.filter(category => 
+    products.some(product => 
+      product.category === category.name && 
+      product.productType !== 'medicine'
+    )
+  );
 
   return (
     <Layout>
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">Categories</h1>
-          <p className="text-gray-600">Browse our delicious selection by category</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-4">Food Categories</h1>
+          <p className="text-gray-600">Browse our delicious food selection by category</p>
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-          {categories.map((category: any) => (
+          {foodCategories.map((category: any) => (
             <Link key={category._id} to={`/products?category=${encodeURIComponent(category.name)}`} className="group">
               <Card className="h-full hover:shadow-lg transition-shadow">
                 <CardHeader className="p-0">

@@ -18,19 +18,28 @@ const ProductsPage = () => {
   const { addToCart } = useCart();
   const { products, categories } = useProducts();
 
+  // Filter categories to only show those used by food products
+  const foodCategories = categories.filter(category => 
+    products.some(product => 
+      product.category === category.name && 
+      product.productType !== 'medicine'
+    )
+  );
+
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const categoryFromUrl = params.get('category');
     if (categoryFromUrl) {
-      // Find a matching category to ensure the case is correct
-      const matchingCategory = categories.find(c => c.name.toLowerCase() === categoryFromUrl.toLowerCase());
+      // Find a matching food category to ensure the case is correct
+      const matchingCategory = foodCategories.find(c => c.name.toLowerCase() === categoryFromUrl.toLowerCase());
       if (matchingCategory) setSelectedCategory(matchingCategory.name);
     }
-  }, [location.search, categories]);
+  }, [location.search, foodCategories]);
 
   const filteredProducts = products
     .filter(product => 
       product.inStock &&
+      product.productType !== 'medicine' && // Exclude medicine products
       product.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
       (selectedCategory === 'All' || product.category === selectedCategory)
     )
@@ -76,7 +85,7 @@ const ProductsPage = () => {
               className="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500"
             >
               <option value="All">All Categories</option>
-              {categories.map(category => (
+              {foodCategories.map(category => (
                 <option key={category._id} value={category.name}>
                   {category.name}
                 </option>

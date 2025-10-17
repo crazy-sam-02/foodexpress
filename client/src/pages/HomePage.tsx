@@ -11,8 +11,15 @@ const HomePage = () => {
   const { products = [], categories = [] } = useProducts() || {};
   const { addToCart } = useCart();
 
-  const featuredProducts = products?.filter((p) => p?.inStock)?.slice(0, 8) || [];
-  const topCategories = categories?.slice(0, 6) || [];
+  const featuredProducts = products?.filter((p) => p?.inStock && p?.productType !== 'medicine')?.slice(0, 8) || [];
+  // Filter categories to only show those used by food products
+  const foodCategories = categories?.filter(category => 
+    products?.some(product => 
+      product.category === category.name && 
+      product.productType !== 'medicine'
+    )
+  ) || [];
+  const topCategories = foodCategories?.slice(0, 6) || [];
 
   return (
     <Layout>
