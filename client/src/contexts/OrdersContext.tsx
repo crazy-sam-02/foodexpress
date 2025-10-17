@@ -6,6 +6,7 @@ import { config } from '@/lib/config';
 
 interface OrdersContextType {
   orders: Order[];
+  isLoading: boolean;
   addOrder: (order: Omit<Order, 'id'>) => Promise<Order | null>;
   updateOrderStatus: (orderId: string, status: Order['status']) => void;
   updateOrderDiscount: (orderId: string, discount: number) => void;
@@ -13,6 +14,7 @@ interface OrdersContextType {
   getTotalSales: () => number;
   getTodaysSales: () => number;
   getPendingOrdersCount: () => number;
+  refreshOrders: () => Promise<void>;
 }
 
 const OrdersContext = createContext<OrdersContextType | undefined>(undefined);
@@ -31,50 +33,112 @@ interface OrdersProviderProps {
 
 export const OrdersProvider: React.FC<OrdersProviderProps> = ({ children }) => {
   const [orders, setOrders] = useState<Order[]>([]);
-  const { user, token, logout } = useUser();
+  const [isLoading, setIsLoading] = useState(false);
+  const [lastFetchUserId, setLastFetchUserId] = useState<string | null>(null);
+  const { user, token, logout, isLoading: userLoading } = useUser();
+
+  // Clear orders when user changes or logs out
+  useEffect(() => {
+    if (!user && !userLoading) {
+      console.log('User logged out, clearing orders');
+      setOrders([]);
+      setLastFetchUserId(null);
+    } else if (user && lastFetchUserId && user.id !== lastFetchUserId) {
+      console.log('User changed, clearing orders for new user');
+      setOrders([]);
+      setLastFetchUserId(null);
+    }
+  }, [user, userLoading, lastFetchUserId]);
 
   useEffect(() => {
     const fetchOrders = async () => {
-      if (user && token) {
-        try {
-          const response = await fetch(`${config.API_URL}/orders`, {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-            },
-          });
-          if (response.ok) {
-            const data = await response.json();
-            if (data.success && data.orders) {
-              setOrders(data.orders.map((order: any) => ({
+      // Don't fetch if user is still loading or if no authentication
+      if (userLoading || !user || !token) {
+        return;
+      }
+
+      // Don't refetch if we already have orders for this user
+      if (lastFetchUserId === user.id && orders.length > 0) {
+        return;
+      }
+
+      setIsLoading(true);
+      try {
+        console.log('Fetching orders for user:', user.email);
+        const response = await fetch(`${config.API_URL}/orders`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && Array.isArray(data.orders)) {
+            const fetchedOrders = data.orders
+              .filter((order: any) => order && order.items && Array.isArray(order.items))
+              .map((order: any) => ({
                 id: order.id,
                 userId: order.userId,
-                items: order.items.map((item: any) => ({
-                  id: item.product._id,
-                  product: item.product,
-                  quantity: item.quantity
-                })),
-                total: order.total,
-                status: order.status,
+                items: order.items
+                  .filter((item: any) => item && item.product && item.product._id)
+                  .map((item: any) => ({
+                    id: item.product._id,
+                    product: {
+                      _id: item.product._id,
+                      id: item.product.id || item.product._id,
+                      name: item.product.name || 'Unknown Product',
+                      description: item.product.description || '',
+                      price: item.product.price || 0,
+                      image: item.product.image || '/placeholder-image.jpg',
+                      category: item.product.category || 'uncategorized',
+                      stock: item.product.stock || 0
+                    },
+                    quantity: item.quantity || 1
+                  })),
+                total: order.total || 0,
+                status: order.status || 'pending',
                 orderDate: order.orderDate,
-                deliveryAddress: order.deliveryAddress,
-                notes: order.notes,
-                paymentMethod: order.paymentMethod
-              })));
-            }
-          } else if (response.status === 401) {
-            // Token may be invalid/expired; clear client auth to stop repeated 401s
-            console.warn('Orders fetch unauthorized, clearing user session');
-            await logout();
-            toast.error('Session expired. Please login again.');
+                deliveryAddress: order.deliveryAddress || '',
+                notes: order.notes || '',
+                paymentMethod: order.paymentMethod || 'cash',
+                // Include tracking fields
+                trackingNumber: order.trackingNumber || undefined,
+                estimatedDelivery: order.estimatedDelivery || undefined,
+                actualDelivery: order.actualDelivery || undefined,
+                statusHistory: order.statusHistory || []
+              }))
+              .filter(order => order.items.length > 0); // Only include orders with valid items
+            
+            console.log('Successfully fetched orders:', fetchedOrders.length);
+            setOrders(fetchedOrders);
+            setLastFetchUserId(user.id);
+          } else {
+            console.warn('Invalid orders response format:', data);
+            setOrders([]);
           }
-        } catch (error) {
-          console.error('Error fetching orders:', error);
+        } else if (response.status === 401) {
+          // Token may be invalid/expired; clear client auth to stop repeated 401s
+          console.warn('Orders fetch unauthorized, clearing user session');
+          setOrders([]);
+          setLastFetchUserId(null);
+          await logout();
+          toast.error('Session expired. Please login again.');
+        } else {
+          console.error('Failed to fetch orders:', response.status, response.statusText);
+          const errorData = await response.json().catch(() => ({}));
+          toast.error(errorData.message || 'Failed to load your orders.');
         }
+      } catch (error) {
+        console.error('Error fetching orders:', error);
+        toast.error('Failed to connect to server. Please check your connection.');
+      } finally {
+        setIsLoading(false);
       }
     };
 
     fetchOrders();
-  }, [user, token]);
+  }, [user, token, userLoading, logout, lastFetchUserId, orders.length]);
 
   const addOrder = async (orderData: Omit<Order, 'id'>) => {
     if (!user || !token) {
@@ -142,7 +206,16 @@ export const OrdersProvider: React.FC<OrdersProviderProps> = ({ children }) => {
           userId: data.order.userId,
           items: data.order.items.map((item: any) => ({
             id: item.product._id || item.product.id,
-            product: item.product,
+            product: {
+              _id: item.product._id,
+              id: item.product.id || item.product._id,
+              name: item.product.name,
+              description: item.product.description,
+              price: item.product.price,
+              image: item.product.image,
+              category: item.product.category,
+              stock: item.product.stock
+            },
             quantity: item.quantity
           })),
           total: data.order.total,
@@ -150,9 +223,14 @@ export const OrdersProvider: React.FC<OrdersProviderProps> = ({ children }) => {
           orderDate: data.order.orderDate,
           deliveryAddress: data.order.deliveryAddress,
           notes: data.order.notes || '',
-          paymentMethod: data.order.paymentMethod
+          paymentMethod: data.order.paymentMethod,
+          trackingNumber: data.order.trackingNumber,
+          estimatedDelivery: data.order.estimatedDelivery,
+          actualDelivery: data.order.actualDelivery,
+          statusHistory: data.order.statusHistory || []
         };
         
+        // Add the new order to the beginning of the list
         setOrders(prev => [newOrder, ...prev]);
         toast.success('Order placed successfully!');
         return newOrder;
@@ -230,8 +308,80 @@ export const OrdersProvider: React.FC<OrdersProviderProps> = ({ children }) => {
     return orders.filter(order => order.status === 'pending').length;
   };
 
+  const refreshOrders = async () => {
+    if (!user || !token) {
+      toast.error('Please login to refresh orders');
+      return;
+    }
+
+    setLastFetchUserId(null); // Force refetch
+    
+    setIsLoading(true);
+    try {
+      console.log('Refreshing orders for user:', user.email);
+      const response = await fetch(`${config.API_URL}/orders`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && Array.isArray(data.orders)) {
+          const fetchedOrders = data.orders
+            .filter((order: any) => order && order.items && Array.isArray(order.items))
+            .map((order: any) => ({
+              id: order.id,
+              userId: order.userId,
+              items: order.items
+                .filter((item: any) => item && item.product && item.product._id)
+                .map((item: any) => ({
+                  id: item.product._id,
+                  product: {
+                    _id: item.product._id,
+                    id: item.product.id || item.product._id,
+                    name: item.product.name || 'Unknown Product',
+                    description: item.product.description || '',
+                    price: item.product.price || 0,
+                    image: item.product.image || '/placeholder-image.jpg',
+                    category: item.product.category || 'uncategorized',
+                    stock: item.product.stock || 0
+                  },
+                  quantity: item.quantity || 1
+                })),
+              total: order.total || 0,
+              status: order.status || 'pending',
+              orderDate: order.orderDate,
+              deliveryAddress: order.deliveryAddress || '',
+              notes: order.notes || '',
+              paymentMethod: order.paymentMethod || 'cash',
+              trackingNumber: order.trackingNumber || undefined,
+              estimatedDelivery: order.estimatedDelivery || undefined,
+              actualDelivery: order.actualDelivery || undefined,
+              statusHistory: order.statusHistory || []
+            }))
+            .filter(order => order.items.length > 0); // Only include orders with valid items
+          
+          setOrders(fetchedOrders);
+          setLastFetchUserId(user.id);
+          toast.success('Orders refreshed successfully');
+        }
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        toast.error(errorData.message || 'Failed to refresh orders');
+      }
+    } catch (error) {
+      console.error('Error refreshing orders:', error);
+      toast.error('Failed to refresh orders');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const value: OrdersContextType = {
     orders,
+    isLoading,
     addOrder,
     updateOrderStatus,
     updateOrderDiscount,
@@ -239,6 +389,7 @@ export const OrdersProvider: React.FC<OrdersProviderProps> = ({ children }) => {
     getTotalSales,
     getTodaysSales,
     getPendingOrdersCount,
+    refreshOrders,
   };
 
   return (

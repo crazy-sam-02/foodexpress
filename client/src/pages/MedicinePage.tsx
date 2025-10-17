@@ -28,12 +28,15 @@ const MedicinePage = () => {
       try {
         setLoading(true);
         setError(null);
-        const response = await api.get('/products?productType=medicine');
+        const response = await api.get('/products/medicines');
         setMedicines(response.data);
       } catch (error: any) {
         console.error('Error fetching medicines:', error);
-        setError('Failed to load medicines. Please try again later.');
-        toast.error('Failed to load medicines');
+        console.error('Error response:', error.response);
+        console.error('Error request:', error.request);
+        console.error('Error message:', error.message);
+        setError(`Failed to load medicines: ${error.message || 'Unknown error'}. Please try again later.`);
+        toast.error(`Failed to load medicines: ${error.message || 'Unknown error'}`);
       } finally {
         setLoading(false);
       }

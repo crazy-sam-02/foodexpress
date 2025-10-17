@@ -10,16 +10,61 @@ router.get("/", async (req, res) => {
   try {
     const categories = await Category.find();
     
-    // Calculate product count for each category
+    // Calculate product count for each category (only food products, excluding medicines)
     const categoriesWithCount = await Promise.all(
       categories.map(async (category) => {
-        const productCount = await Product.countDocuments({ category: category.name });
+        const productCount = await Product.countDocuments({ 
+          category: category.name,
+          productType: { $ne: 'medicine' } // Exclude medicine products
+        });
         return {
           _id: category._id,
           name: category.name,
           description: category.description,
           image: category.image,
           productCount,
+          createdAt: category.createdAt,
+          updatedAt: category.updatedAt,
+        };
+      })
+    );
+    
+    // Filter out categories that are used only by medicine products (productCount = 0)
+    const foodCategories = categoriesWithCount.filter(category => category.productCount > 0);
+    
+    res.json(foodCategories);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// GET all categories including medicine categories (for admin use)
+router.get("/all", async (req, res) => {
+  try {
+    const categories = await Category.find();
+    
+    // Calculate product count for each category (including all product types)
+    const categoriesWithCount = await Promise.all(
+      categories.map(async (category) => {
+        const productCount = await Product.countDocuments({ category: category.name });
+        const foodProductCount = await Product.countDocuments({ 
+          category: category.name,
+          productType: { $ne: 'medicine' }
+        });
+        const medicineProductCount = await Product.countDocuments({ 
+          category: category.name,
+          productType: 'medicine'
+        });
+        
+        return {
+          _id: category._id,
+          name: category.name,
+          description: category.description,
+          image: category.image,
+          productCount,
+          foodProductCount,
+          medicineProductCount,
+          categoryType: foodProductCount > 0 ? (medicineProductCount > 0 ? 'mixed' : 'food') : 'medicine',
           createdAt: category.createdAt,
           updatedAt: category.updatedAt,
         };
@@ -38,7 +83,11 @@ router.get("/:id", async (req, res) => {
     const category = await Category.findById(req.params.id);
     if (!category) return res.status(404).json({ message: "Category not found" });
     
-    const productCount = await Product.countDocuments({ category: category.name });
+    // Only count food products, exclude medicine products
+    const productCount = await Product.countDocuments({ 
+      category: category.name,
+      productType: { $ne: 'medicine' } // Exclude medicine products
+    });
     
     res.json({
       _id: category._id,

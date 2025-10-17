@@ -6,15 +6,32 @@ import { Link } from 'react-router-dom';
 import { useProducts } from '@/contexts/ProductsContext';
 
 const CategoriesPage = () => {
-  const { categories, products } = useProducts();
+  const { categories, products, isLoading } = useProducts();
 
-  // Filter categories to only show those used by food products
+  // Since the backend now filters out medicine categories, we can use categories directly
+  // But we still filter on frontend for additional safety
   const foodCategories = categories.filter(category => 
+    category.productCount > 0 && // Only show categories with products
     products.some(product => 
       product.category === category.name && 
       product.productType !== 'medicine'
     )
   );
+
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="container mx-auto px-4 py-8">
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <div className="w-8 h-8 border-4 border-amber-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading categories...</p>
+            </div>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
@@ -24,8 +41,14 @@ const CategoriesPage = () => {
           <p className="text-gray-600">Browse our delicious food selection by category</p>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-          {foodCategories.map((category: any) => (
+        {foodCategories.length === 0 ? (
+          <div className="text-center py-12">
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No food categories available</h3>
+            <p className="text-gray-600">Please check back later for our food categories.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+            {foodCategories.map((category: any) => (
             <Link key={category._id} to={`/products?category=${encodeURIComponent(category.name)}`} className="group">
               <Card className="h-full hover:shadow-lg transition-shadow">
                 <CardHeader className="p-0">
@@ -42,13 +65,12 @@ const CategoriesPage = () => {
                     {category.productCount} items
                   </Badge>
                 </CardContent>
-              </Card>
-            </Link>
-          ))}
-        </div>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
     </Layout>
   );
-};
-
-export default CategoriesPage;
+};export default CategoriesPage;

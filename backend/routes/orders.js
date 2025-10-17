@@ -11,34 +11,60 @@ const router = express.Router();
 // Get all orders for the authenticated user
 router.get('/', authenticateToken, async (req, res) => {
   try {
+    console.log(`[Orders] Fetching orders for user: ${req.user.id}`);
+    
     const orders = await Order.find({ userId: req.user.id })
       .populate('items.product')
       .sort({ orderDate: -1 });
+
+    console.log(`[Orders] Found ${orders.length} orders for user ${req.user.id}`);
+    
+    // Check for orders with null products
+    const ordersWithNullProducts = orders.filter(order => 
+      order.items.some(item => !item.product)
+    );
+    
+    if (ordersWithNullProducts.length > 0) {
+      console.warn(`[Orders] Found ${ordersWithNullProducts.length} orders with null products:`, 
+        ordersWithNullProducts.map(o => ({ id: o._id, itemsWithNullProducts: o.items.filter(i => !i.product).length }))
+      );
+    }
 
     res.json({
       success: true,
       orders: orders.map(order => ({
         id: order._id.toString(),
         userId: order.userId.toString(),
-        items: order.items.map(item => ({
-          product: {
-            _id: item.product._id.toString(),
-            id: item.product._id.toString(),
-            name: item.product.name,
-            description: item.product.description,
-            price: item.product.price,
-            image: item.product.image,
-            category: item.product.category,
-            stock: item.product.stock
-          },
-          quantity: item.quantity
-        })),
+        items: order.items
+          .filter(item => item.product) // Filter out items with null products
+          .map(item => ({
+            product: {
+              _id: item.product._id.toString(),
+              id: item.product._id.toString(),
+              name: item.product.name || 'Unknown Product',
+              description: item.product.description || '',
+              price: item.product.price || 0,
+              image: item.product.image || '/placeholder-image.jpg',
+              category: item.product.category || 'uncategorized',
+              stock: item.product.stock || 0
+            },
+            quantity: item.quantity
+          })),
         total: order.total,
         status: order.status,
         orderDate: order.orderDate,
         deliveryAddress: order.deliveryAddress,
-        notes: order.notes,
-        paymentMethod: order.paymentMethod
+        notes: order.notes || '',
+        paymentMethod: order.paymentMethod,
+        trackingNumber: order.trackingNumber || null,
+        estimatedDelivery: order.estimatedDelivery || null,
+        actualDelivery: order.actualDelivery || null,
+        adminNotes: order.adminNotes || '',
+        statusHistory: order.statusHistory || [],
+        orderAction: order.orderAction || 'none',
+        discount: order.discount || 0,
+        createdAt: order.createdAt,
+        updatedAt: order.updatedAt
       }))
     });
   } catch (error) {
@@ -77,19 +103,21 @@ router.get('/:id', authenticateToken, async (req, res) => {
       order: {
         id: order._id.toString(),
         userId: order.userId.toString(),
-        items: order.items.map(item => ({
-          product: {
-            _id: item.product._id.toString(),
-            id: item.product._id.toString(),
-            name: item.product.name,
-            description: item.product.description,
-            price: item.product.price,
-            image: item.product.image,
-            category: item.product.category,
-            stock: item.product.stock
-          },
-          quantity: item.quantity
-        })),
+        items: order.items
+          .filter(item => item.product) // Filter out items with null products
+          .map(item => ({
+            product: {
+              _id: item.product._id.toString(),
+              id: item.product._id.toString(),
+              name: item.product.name || 'Unknown Product',
+              description: item.product.description || '',
+              price: item.product.price || 0,
+              image: item.product.image || '/placeholder-image.jpg',
+              category: item.product.category || 'uncategorized',
+              stock: item.product.stock || 0
+            },
+            quantity: item.quantity
+          })),
         total: order.total,
         status: order.status,
         orderDate: order.orderDate,
@@ -158,12 +186,21 @@ router.post('/', authenticateToken, async (req, res) => {
     let calculatedTotal = 0;
 
     for (const item of items) {
+      // Validate product ID format
+      if (!item.product || !mongoose.Types.ObjectId.isValid(item.product)) {
+        return res.status(400).json({
+          success: false,
+          message: `Invalid product ID: ${item.product}`
+        });
+      }
+
       // Validate product exists
       const product = await Product.findById(item.product);
       if (!product) {
+        console.warn(`[Order Creation] Product not found: ${item.product}`);
         return res.status(400).json({
           success: false,
-          message: `Product not found: ${item.product}`
+          message: `Product not found: ${item.product}. The product may have been removed.`
         });
       }
 
@@ -207,7 +244,7 @@ router.post('/', authenticateToken, async (req, res) => {
       });
     }
 
-    // Create the order with explicit userId
+    // Create the order with explicit userId and initial status history
     const orderData = {
       userId: req.user.id,
       items: processedItems,
@@ -215,10 +252,17 @@ router.post('/', authenticateToken, async (req, res) => {
       status: 'pending',
       deliveryAddress,
       notes: notes || '',
-      paymentMethod,
+      paymentMethod: paymentMethod.toLowerCase(),
       orderDate: new Date(),
       orderAction: 'none',
-      discount: 0
+      discount: 0,
+      adminNotes: '',
+      statusHistory: [{
+        status: 'pending',
+        timestamp: new Date(),
+        updatedBy: 'system',
+        notes: 'Order placed successfully'
+      }]
     };
 
     console.log('Creating order with data:', orderData);
@@ -253,27 +297,39 @@ router.post('/', authenticateToken, async (req, res) => {
       success: true,
       message: 'Order created successfully',
       order: {
+        _id: populatedOrder._id.toString(),
         id: populatedOrder._id.toString(),
         userId: populatedOrder.userId.toString(),
-        items: populatedOrder.items.map(item => ({
-          product: {
-            _id: item.product._id.toString(),
-            id: item.product._id.toString(),
-            name: item.product.name,
-            description: item.product.description,
-            price: item.product.price,
-            image: item.product.image,
-            category: item.product.category,
-            stock: item.product.stock
-          },
-          quantity: item.quantity
-        })),
+        items: populatedOrder.items
+          .filter(item => item.product) // Filter out items with null products
+          .map(item => ({
+            product: {
+              _id: item.product._id.toString(),
+              id: item.product._id.toString(),
+              name: item.product.name || 'Unknown Product',
+              description: item.product.description || '',
+              price: item.product.price || 0,
+              image: item.product.image || '/placeholder-image.jpg',
+              category: item.product.category || 'uncategorized',
+              stock: item.product.stock || 0
+            },
+            quantity: item.quantity
+          })),
         total: populatedOrder.total,
         status: populatedOrder.status,
         orderDate: populatedOrder.orderDate,
         deliveryAddress: populatedOrder.deliveryAddress,
         notes: populatedOrder.notes,
-        paymentMethod: populatedOrder.paymentMethod
+        paymentMethod: populatedOrder.paymentMethod,
+        trackingNumber: populatedOrder.trackingNumber,
+        estimatedDelivery: populatedOrder.estimatedDelivery,
+        actualDelivery: populatedOrder.actualDelivery,
+        adminNotes: populatedOrder.adminNotes,
+        statusHistory: populatedOrder.statusHistory,
+        orderAction: populatedOrder.orderAction,
+        discount: populatedOrder.discount,
+        createdAt: populatedOrder.createdAt,
+        updatedAt: populatedOrder.updatedAt
       }
     });
   } catch (error) {
@@ -351,18 +407,20 @@ router.get('/admin/all', requireAdminSession, async (req, res) => {
         userId: order.userId ? order.userId._id.toString() : null,
         userName: order.userId ? order.userId.username : 'N/A',
         userEmail: order.userId ? order.userId.email : 'N/A',
-        items: order.items.map(item => ({
-          product: item.product ? {
-            _id: item.product._id.toString(),
-            id: item.product._id.toString(),
-            name: item.product.name,
-            description: item.product.description,
-            price: item.product.price,
-            image: item.product.image,
-            category: item.product.category
-          } : null,
-          quantity: item.quantity
-        })),
+        items: order.items
+          .filter(item => item.product) // Filter out items with null products
+          .map(item => ({
+            product: {
+              _id: item.product._id.toString(),
+              id: item.product._id.toString(),
+              name: item.product.name || 'Unknown Product',
+              description: item.product.description || '',
+              price: item.product.price || 0,
+              image: item.product.image || '/placeholder-image.jpg',
+              category: item.product.category || 'uncategorized'
+            },
+            quantity: item.quantity
+          })),
         total: order.total,
         status: order.status,
         orderDate: order.orderDate,
@@ -386,11 +444,28 @@ router.get('/admin/all', requireAdminSession, async (req, res) => {
 // Update order details (admin only)
 router.patch('/admin/:id', requireAdminSession, async (req, res) => {
   try {
-    const { status, orderAction, discount } = req.body;
-    console.log('[Admin] Update order request received:', { id: req.params.id, status, orderAction, discount });
+    const { 
+      status, 
+      orderAction, 
+      discount, 
+      trackingNumber, 
+      estimatedDelivery, 
+      adminNotes, 
+      statusChangeNotes 
+    } = req.body;
+    
+    console.log('[Admin] Update order request received:', { 
+      id: req.params.id, 
+      status, 
+      orderAction, 
+      discount, 
+      trackingNumber, 
+      estimatedDelivery,
+      adminNotes 
+    });
 
     // Validate input
-    if (status && !['pending', 'processing', 'shipped', 'delivered', 'cancelled', 'confirmed', 'preparing', 'ready'].includes(status)) {
+    if (status && !['pending', 'confirmed', 'preparing', 'ready', 'processing', 'shipped', 'delivered', 'cancelled'].includes(status)) {
       return res.status(400).json({
         success: false,
         message: 'Invalid status'
@@ -404,10 +479,26 @@ router.patch('/admin/:id', requireAdminSession, async (req, res) => {
       });
     }
 
+    if (estimatedDelivery && isNaN(Date.parse(estimatedDelivery))) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid estimated delivery date'
+      });
+    }
+
     const updateData = {};
     if (status) updateData.status = status;
     if (orderAction) updateData.orderAction = orderAction;
     if (discount !== undefined) updateData.discount = discount;
+    if (trackingNumber) updateData.trackingNumber = trackingNumber;
+    if (estimatedDelivery) updateData.estimatedDelivery = new Date(estimatedDelivery);
+    if (adminNotes) updateData.adminNotes = adminNotes;
+
+    // Set admin info for status history tracking
+    if (status) {
+      updateData._adminUpdatedBy = req.session?.adminUser?.email || 'admin';
+      updateData._statusChangeNotes = statusChangeNotes || '';
+    }
 
     console.log('[Admin] Updating order with data:', updateData);
 
@@ -415,7 +506,7 @@ router.patch('/admin/:id', requireAdminSession, async (req, res) => {
       req.params.id,
       updateData,
       { new: true }
-    ).populate('items.product');
+    ).populate('items.product').populate('userId', 'username email');
 
     if (!order) {
       console.warn('[Admin] Order not found for ID:', req.params.id);

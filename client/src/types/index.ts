@@ -37,6 +37,13 @@ export interface User {
   updatedAt?: string;
 }
 
+export interface OrderStatusHistory {
+  status: string;
+  timestamp: string;
+  updatedBy: string;
+  notes?: string;
+}
+
 export interface Order {
   id: string; // MongoDB ObjectId as string
   userId: string;
@@ -50,6 +57,12 @@ export interface Order {
   paymentMethod?: 'cash' | 'card' | 'paypal' | 'upi';
   discount?: number;
   orderAction?: string;
+  // Enhanced tracking fields
+  trackingNumber?: string;
+  estimatedDelivery?: string;
+  actualDelivery?: string;
+  adminNotes?: string;
+  statusHistory?: OrderStatusHistory[];
   createdAt?: string;
   updatedAt?: string;
 }
