@@ -32,7 +32,7 @@ const FAQPage = () => {
     },
     {
       question: "What payment methods do you accept?",
-      answer: "We accept all major credit cards, PayPal, UPI, and cash on delivery. All online payments are secured with industry-standard encryption."
+      answer: "We currently accept cash on delivery (COD) only. You can pay when your order arrives at your doorstep."
     },
     {
       question: "Can I customize a cake?",

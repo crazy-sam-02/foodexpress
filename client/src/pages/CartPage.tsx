@@ -18,8 +18,8 @@ const CartPage = () => {
   };
 
   const subtotal = cartItems.reduce((sum, item) => sum + ((item.price ?? item.product.price) * item.quantity), 0);
-  const tax = subtotal * 0.12; // 12% tax
-  const shipping = subtotal > 500 ? 0 : 49; // Free shipping over ₹500
+  const tax = subtotal * 0.08; // 8% tax
+  const shipping = subtotal > 500 ? 0 : 50; // Free shipping over ₹500
   const total = subtotal + tax + shipping;
 
   if (cartItems.length === 0) {

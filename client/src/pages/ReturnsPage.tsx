@@ -38,7 +38,7 @@ const ReturnsPage = () => {
     {
       step: 4,
       title: "Receive Refund",
-      description: "Refunds are processed within 3-5 business days to your original payment method."
+      description: "Since we only accept cash on delivery, refunds will be processed in cash or bank transfer within 3-5 business days."
     }
   ];
 
@@ -141,7 +141,7 @@ const ReturnsPage = () => {
               <div>
                 <h3 className="font-semibold text-gray-900 mb-2">Refund Timeline</h3>
                 <p className="text-gray-600">
-                  Once we receive and inspect the returned item, we will process your refund within 3-5 business days. The refund will be credited to your original payment method.
+                  Once we receive and inspect the returned item, we will process your refund within 3-5 business days. Since we use cash on delivery, refunds will be processed via bank transfer or cash.
                 </p>
               </div>
               <div>

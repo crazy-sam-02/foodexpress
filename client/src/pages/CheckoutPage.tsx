@@ -9,9 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, CreditCard, Truck, MapPin, Phone } from 'lucide-react';
+import { ArrowLeft, Truck, MapPin, Phone } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
 import { toast } from 'sonner';
 
@@ -32,12 +31,14 @@ const CheckoutPage = () => {
     zipCode: '',
     deliveryNotes: ''
   });
-  const [paymentMethod, setPaymentMethod] = useState('card');
+  const [paymentMethod, setPaymentMethod] = useState('cash');
 
-  const subtotal = getCartTotal();
-  const tax = subtotal * 0.08;
-  const shipping = subtotal > 500 ? 0 : 499;
-  const total = subtotal + tax + shipping;
+  // Calculate totals with proper rounding to match backend calculation
+  const subtotal = Number(cartItems.reduce((sum, item) => 
+    sum + (item.product.price * item.quantity), 0).toFixed(2));
+  const tax = Number((subtotal * 0.08).toFixed(2));
+  const shipping = subtotal > 500 ? 0 : 50;
+  const total = Number((subtotal + tax + shipping).toFixed(2));
 
   const handleInputChange = (field: string, value: string) => {
     setDeliveryInfo(prev => ({ ...prev, [field]: value }));
@@ -84,12 +85,11 @@ const CheckoutPage = () => {
       // Show loading toast
       toast.loading('Processing your order...', { id: 'order-processing' });
 
-      // Calculate totals with proper rounding
-      const calculatedSubtotal = Number(cartItems.reduce((sum, item) => 
-        sum + (item.product.price * item.quantity), 0).toFixed(2));
-      const calculatedTax = Number((calculatedSubtotal * 0.08).toFixed(2));
-      const calculatedShipping = calculatedSubtotal > 500 ? 0 : 499;
-      const calculatedTotal = Number((calculatedSubtotal + calculatedTax + calculatedShipping).toFixed(2));
+      // Calculate totals with proper rounding (should match display calculation)
+      const calculatedSubtotal = subtotal; // Use the same subtotal from display
+      const calculatedTax = tax; // Use the same tax from display
+      const calculatedShipping = shipping; // Use the same shipping from display
+      const calculatedTotal = total; // Use the same total from display
 
       // Create order object
       const orderData: Omit<Order, 'id'> = {
@@ -104,7 +104,7 @@ const CheckoutPage = () => {
         orderDate: new Date().toISOString(),
         deliveryAddress: `${deliveryInfo.address}, ${deliveryInfo.city}, ${deliveryInfo.state} ${deliveryInfo.zipCode}`,
         notes: deliveryInfo.deliveryNotes || '',
-        paymentMethod: paymentMethod as 'cash' | 'card' | 'paypal' | 'upi'
+        paymentMethod: paymentMethod as 'cash'
       };
 
       console.log('Placing order with data:', orderData);
@@ -305,56 +305,20 @@ const CheckoutPage = () => {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <CreditCard className="h-5 w-5" />
+                  <span className="text-lg">💵</span>
                   Payment Method
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} disabled={isProcessing}>
-                  <div className="flex items-center space-x-2 p-4 border rounded-lg">
-                    <RadioGroupItem value="card" id="card" />
-                    <Label htmlFor="card" className="flex-1 cursor-pointer">
-                      <div className="flex items-center gap-2">
-                        <CreditCard className="h-4 w-4" />
-                        Credit/Debit Card
-                      </div>
-                      <p className="text-sm text-gray-600">Pay securely with your card</p>
-                    </Label>
-                  </div>
-                  
-                  <div className="flex items-center space-x-2 p-4 border rounded-lg">
-                    <RadioGroupItem value="cash" id="cash" />
-                    <Label htmlFor="cash" className="flex-1 cursor-pointer">
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg">💵</span>
-                        Cash on Delivery
-                      </div>
+                <div className="flex items-center space-x-2 p-4 border rounded-lg bg-gray-50">
+                  <div className="flex items-center gap-3">
+                    <span className="text-lg">💵</span>
+                    <div>
+                      <div className="font-medium">Cash on Delivery</div>
                       <p className="text-sm text-gray-600">Pay when your order arrives</p>
-                    </Label>
+                    </div>
                   </div>
-
-                  <div className="flex items-center space-x-2 p-4 border rounded-lg">
-                    <RadioGroupItem value="paypal" id="paypal" />
-                    <Label htmlFor="paypal" className="flex-1 cursor-pointer">
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg">🅿️</span>
-                        PayPal
-                      </div>
-                      <p className="text-sm text-gray-600">Pay with your PayPal account</p>
-                    </Label>
-                  </div>
-
-                  <div className="flex items-center space-x-2 p-4 border rounded-lg">
-                    <RadioGroupItem value="upi" id="upi" />
-                    <Label htmlFor="upi" className="flex-1 cursor-pointer">
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg">📱</span>
-                        UPI Payment
-                      </div>
-                      <p className="text-sm text-gray-600">Pay using UPI apps</p>
-                    </Label>
-                  </div>
-                </RadioGroup>
+                </div>
               </CardContent>
             </Card>
           </div>

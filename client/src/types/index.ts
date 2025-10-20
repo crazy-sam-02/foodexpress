@@ -54,7 +54,7 @@ export interface Order {
   deliveryDate?: string;
   deliveryAddress: string;
   notes?: string;
-  paymentMethod?: 'cash' | 'card' | 'paypal' | 'upi';
+  paymentMethod?: 'cash';
   discount?: number;
   orderAction?: string;
   // Enhanced tracking fields

@@ -54,7 +54,7 @@ const OrdersPage = () => {
                       <h3 className="font-semibold">Order Details</h3>
                       <p><strong>Order Date:</strong> {new Date(order.orderDate).toLocaleDateString()}</p>
                       <p><strong>Total:</strong> ₹{order.total.toFixed(2)}</p>
-                      <p><strong>Payment Method:</strong> {order.paymentMethod}</p>
+                      <p><strong>Payment Method:</strong> Cash on Delivery</p>
                       <p><strong>Delivery Address:</strong> {order.deliveryAddress}</p>
                       {order.trackingNumber && (
                         <p><strong>Tracking Number:</strong> {order.trackingNumber}</p>

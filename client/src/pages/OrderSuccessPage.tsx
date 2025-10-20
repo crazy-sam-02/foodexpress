@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle, Download, Home, Package, MapPin, CreditCard, Truck } from 'lucide-react';
+import { CheckCircle, Download, Home, Package, MapPin, Truck } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
 
 interface OrderData {
@@ -155,20 +155,14 @@ const OrderSuccessPage = () => {
           <Card className="mb-8">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <CreditCard className="h-5 w-5" />
+                <span className="text-lg">💵</span>
                 Payment Method
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center gap-2">
-                {payment === 'card' && <CreditCard className="h-4 w-4" />}
-                {payment === 'cash' && <span className="text-lg">💵</span>}
-                {payment === 'paypal' && <span className="text-lg">🅿️</span>}
-                <span className="capitalize">
-                  {payment === 'card' ? 'Credit/Debit Card' : 
-                   payment === 'cash' ? 'Cash on Delivery' : 
-                   'PayPal'}
-                </span>
+                <span className="text-lg">💵</span>
+                <span>Cash on Delivery</span>
               </div>
             </CardContent>
           </Card>

@@ -44,7 +44,8 @@ const orderSchema = new mongoose.Schema({
   },
   paymentMethod: {
     type: String,
-    enum: ['cash', 'card', 'paypal', 'upi'],
+    enum: ['cash'],
+    default: 'cash',
     required: true
   },
   // Admin management fields

@@ -166,6 +166,11 @@ export const OrdersProvider: React.FC<OrdersProviderProps> = ({ children }) => {
       }
 
       console.log('Sending order to backend:', backendOrderData);
+      console.log('Order calculation breakdown:', {
+        subtotal: orderData.items.reduce((sum, item) => sum + (item.product.price * item.quantity), 0),
+        total: orderData.total,
+        itemCount: backendOrderData.items.length
+      });
 
       const response = await fetch(`${config.API_URL}/orders`, {
         method: 'POST',

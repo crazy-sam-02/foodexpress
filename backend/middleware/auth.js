@@ -42,5 +42,7 @@ export const requireAuth = (req, res, next) => {
   }
 };
 
+
+
 // Alias for backwards compatibility
 export const authenticateToken = requireAuth;

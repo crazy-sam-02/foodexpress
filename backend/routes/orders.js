@@ -174,10 +174,10 @@ router.post('/', authenticateToken, async (req, res) => {
       });
     }
 
-    if (!paymentMethod || !['cash', 'card', 'paypal', 'upi', 'CASH', 'CARD', 'PAYPAL', 'UPI'].includes(paymentMethod.toLowerCase())) {
+    if (!paymentMethod || !['cash', 'CASH'].includes(paymentMethod.toLowerCase())) {
       return res.status(400).json({
         success: false,
-        message: 'Valid payment method is required (cash, card, paypal, or upi)'
+        message: 'Valid payment method is required (cash only)'
       });
     }
 
@@ -228,19 +228,34 @@ router.post('/', authenticateToken, async (req, res) => {
       calculatedTotal += product.price * item.quantity;
     }
 
-    // Add tax and shipping (8% tax, ₹499 shipping under ₹500)
-    const subtotal = calculatedTotal;
-    const tax = subtotal * 0.08;
-    const shipping = subtotal > 500 ? 0 : 499;
-    calculatedTotal = subtotal + tax + shipping;
-
-    // Verify the total matches (with small tolerance for floating point)
+    // Add tax and shipping (8% tax, ₹50 shipping under ₹500; free for subtotal > ₹500)
+    const subtotal = Number(calculatedTotal.toFixed(2));
+    const tax = Number((subtotal * 0.08).toFixed(2));
+    const shipping = subtotal > 500 ? 0 : 50;
+    calculatedTotal = Number((subtotal + tax + shipping).toFixed(2));    // Verify the total matches (with small tolerance for floating point)
+    console.log('Total verification:', { 
+      calculated: calculatedTotal, 
+      received: total, 
+      difference: Math.abs(calculatedTotal - total),
+      subtotal,
+      tax,
+      shipping
+    });
+    
     if (Math.abs(calculatedTotal - total) > 0.01) {
       console.log('Total mismatch:', { calculated: calculatedTotal, received: total });
       return res.status(400).json({
         success: false,
         message: 'Order total mismatch. Please refresh and try again.',
-        details: { calculated: calculatedTotal.toFixed(2), received: total.toFixed(2) }
+        details: { 
+          calculated: calculatedTotal.toFixed(2), 
+          received: total.toFixed(2),
+          breakdown: {
+            subtotal: subtotal.toFixed(2),
+            tax: tax.toFixed(2),
+            shipping: shipping.toFixed(2)
+          }
+        }
       });
     }
 

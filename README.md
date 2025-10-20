@@ -158,7 +158,7 @@ The frontend will run on `http://localhost:5173`
 The application is configured for Indian Rupees (₹):
 
 - Free shipping on orders ₹500 and above
-- Shipping cost: ₹499 for orders under ₹500
+- Shipping cost: ₹50 for orders under ₹500
 - All prices display in ₹ format
 
 ## Project Structure

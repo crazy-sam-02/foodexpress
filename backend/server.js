@@ -30,10 +30,28 @@ app.use((req, res, next) => {
 });
 
 app.use(cors({
-  origin: [
-    process.env.FRONTEND_URL || "http://localhost:8080",
-    "http://localhost:8081", // Allow alternative port
-  ],
+  origin: function(origin, callback) {
+    // Allow requests with no origin (mobile apps, Postman, etc.)
+    if (!origin) return callback(null, true);
+    
+    const allowedOrigins = [
+      process.env.FRONTEND_URL || "http://localhost:8080",
+      "http://localhost:8081", // Alternative local port
+      "http://localhost:5173", // Vite default port
+    ];
+    
+    // In production, also allow the specific Render URL
+    if (process.env.NODE_ENV === 'production' && process.env.FRONTEND_URL) {
+      allowedOrigins.push(process.env.FRONTEND_URL);
+    }
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.warn('CORS blocked origin:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -64,7 +82,25 @@ app.use(
 const server = http.createServer(app);
 const io = new SocketIOServer(server, {
   cors: {
-    origin: process.env.FRONTEND_URL || "http://localhost:8080",
+    origin: function(origin, callback) {
+      if (!origin) return callback(null, true);
+      
+      const allowedOrigins = [
+        process.env.FRONTEND_URL || "http://localhost:8080",
+        "http://localhost:8081",
+        "http://localhost:5173",
+      ];
+      
+      if (process.env.NODE_ENV === 'production' && process.env.FRONTEND_URL) {
+        allowedOrigins.push(process.env.FRONTEND_URL);
+      }
+      
+      if (allowedOrigins.indexOf(origin) !== -1) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS']
   }
@@ -89,17 +125,22 @@ app.use("/api/categories", categoryRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/orders", orderRoutes);
 
-// Health check endpoint
+// Health check endpoint for Render
 app.get("/health", (req, res) => {
-  res.status(200).json({ status: "OK", message: "Server is running" });
-});
-
-// Test admin session endpoint
-app.get("/api/test/admin", (req, res) => {
   res.status(200).json({ 
     status: "OK", 
-    message: "Test endpoint working",
-    session: req.session?.admin ? "Admin session active" : "No admin session"
+    message: "Server is running",
+    environment: process.env.NODE_ENV || 'development',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Root endpoint
+app.get("/", (req, res) => {
+  res.status(200).json({ 
+    message: "FoodExpress API Server",
+    version: "1.0.0",
+    environment: process.env.NODE_ENV || 'development'
   });
 });
 

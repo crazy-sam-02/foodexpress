@@ -207,10 +207,10 @@ export const OrderDetailsModal = ({ order, isOpen, onClose }: OrderDetailsModalP
                   <Separator />
                   <div className="flex justify-between text-sm">
                     <div className="flex items-center gap-2">
-                      <CreditCard className="h-4 w-4 text-gray-500" />
+                      <span className="text-lg">💵</span>
                       <span>Payment Method:</span>
                     </div>
-                    <span className="capitalize font-medium">{order.paymentMethod}</span>
+                    <span className="font-medium">Cash on Delivery</span>
                   </div>
                 </>
               )}
