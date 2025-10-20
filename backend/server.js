@@ -8,13 +8,16 @@ import cookieParser from "cookie-parser";
 import session from "express-session";
 import MongoStore from "connect-mongo";
 
-import authRoutes from "./routes/auth.js";
+import authRoutes, { initializeFirebase } from "./routes/auth.js";
 import productRoutes from "./routes/products.js";
 import categoryRoutes from "./routes/categories.js";
 import cartRoutes from "./routes/cart.js";
 import orderRoutes from "./routes/orders.js";
 
 dotenv.config();
+
+// Initialize Firebase after environment variables are loaded
+initializeFirebase();
 
 const app = express();
 

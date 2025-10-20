@@ -2,62 +2,59 @@ import express from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import admin from "firebase-admin";
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from 'url';
 import User from "../models/User.js";
 import { sendSuccess, sendError, sendServerError, sendUnauthorized, sendForbidden } from "../utils/apiResponse.js";
 import { requireAdminSession } from "../middleware/adminSession.js";
 
 const router = express.Router();
 
-// Get current directory in ES modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// ---------------- FIREBASE INITIALIZATION USING JSON FILE ----------------
+// ---------------- FIREBASE INITIALIZATION USING ENVIRONMENT VARIABLES ----------------
 let firebaseInitialized = false;
 
-try {
-  if (!admin.apps.length) {
-    // Try multiple paths to find the Firebase service account JSON
-    const possiblePaths = [
-      path.resolve(__dirname, "../config/firebase-service-account.json"),
-      path.resolve(process.cwd(), "config/firebase-service-account.json"),
-      path.resolve(process.cwd(), "backend/config/firebase-service-account.json"),
-    ];
+// Initialize Firebase Admin SDK (called after environment variables are loaded)
+function initializeFirebase() {
+  if (firebaseInitialized) return true;
+  
+  try {
+    if (!admin.apps.length) {
+      // Get Firebase configuration from environment variables
+      const firebaseConfig = {
+        type: "service_account",
+        project_id: process.env.FIREBASE_PROJECT_ID,
+        client_email: process.env.FIREBASE_CLIENT_EMAIL,
+        private_key: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'), // Handle escaped newlines
+      };
 
-    let serviceAccount = null;
-    let foundPath = null;
+      // Validate required Firebase environment variables
+      const requiredVars = ['FIREBASE_PROJECT_ID', 'FIREBASE_CLIENT_EMAIL', 'FIREBASE_PRIVATE_KEY'];
+      const missingVars = requiredVars.filter(varName => !process.env[varName]);
 
-    for (const firebasePath of possiblePaths) {
-      if (fs.existsSync(firebasePath)) {
-        serviceAccount = JSON.parse(fs.readFileSync(firebasePath, "utf-8"));
-        foundPath = firebasePath;
-        break;
+      if (missingVars.length > 0) {
+        console.error("❌ Missing Firebase environment variables:");
+        missingVars.forEach(varName => console.error(`   - ${varName}`));
+        console.error("\n💡 Please set Firebase environment variables in your .env file");
+        console.error("   Check .env.example for the required format");
+        return false;
       }
-    }
 
-    if (!serviceAccount) {
-      console.error("❌ Firebase service account JSON not found. Tried paths:");
-      possiblePaths.forEach(p => console.error(`   - ${p}`));
-      console.error("\n💡 Please place your firebase-service-account.json in the backend/config/ folder");
-    } else {
       admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount),
+        credential: admin.credential.cert(firebaseConfig),
       });
 
       firebaseInitialized = true;
       console.log("✅ Firebase Admin SDK initialized successfully");
-      console.log(`📁 Loaded from: ${foundPath}`);
+      console.log(`🔧 Loaded from environment variables`);
+      return true;
+    } else {
+      firebaseInitialized = true;
+      console.log("✅ Firebase Admin SDK already initialized");
+      return true;
     }
-  } else {
-    firebaseInitialized = true;
-    console.log("✅ Firebase Admin SDK already initialized");
+  } catch (error) {
+    console.error("❌ Firebase Admin initialization error:", error.message);
+    console.error("Stack:", error.stack);
+    return false;
   }
-} catch (error) {
-  console.error("❌ Firebase Admin initialization error:", error.message);
-  console.error("Stack:", error.stack);
 }
 
 // -------------------- AUTH ROUTES --------------------
@@ -70,7 +67,7 @@ async function handleFirebaseIdTokenLogin({ idToken, name, email, photoURL }, re
 
     if (!firebaseInitialized) {
       return res.status(500).json({
-        message: "Firebase authentication is not configured on the server. Please ensure firebase-service-account.json is in the backend/config/ folder.",
+        message: "Firebase authentication is not configured on the server. Please ensure Firebase environment variables are set correctly.",
       });
     }
 
@@ -85,21 +82,59 @@ async function handleFirebaseIdTokenLogin({ idToken, name, email, photoURL }, re
       return res.status(401).json({ message: "Email mismatch" });
     }
 
+    console.log(`🔍 Looking for user with email: ${email.toLowerCase()}`);
     let user = await User.findOne({ email: email.toLowerCase() });
+    console.log(`👤 User found: ${user ? 'YES' : 'NO'}${user ? ` (GoogleID: ${user.googleId || 'NONE'})` : ''}`);
 
     if (!user) {
-      user = new User({
-        name: name || email.split("@")[0],
-        email: email.toLowerCase(),
-        password: await bcrypt.hash(Math.random().toString(36).substring(2, 15), 10),
-        googleId: decodedToken.uid,
-        photoURL: photoURL || "",
-      });
-      await user.save();
-    } else if (!user.googleId) {
-      user.googleId = decodedToken.uid;
-      user.photoURL = photoURL || user.photoURL;
-      await user.save();
+      console.log("🚀 Creating new user for email:", email.toLowerCase());
+      // Try to create a new user, but handle the case where another request might have created it
+      try {
+        user = new User({
+          name: name || email.split("@")[0],
+          email: email.toLowerCase(),
+          password: await bcrypt.hash(Math.random().toString(36).substring(2, 15), 10),
+          googleId: decodedToken.uid,
+          photoURL: photoURL || "",
+        });
+        await user.save();
+        console.log("✅ Created new user:", user.email);
+      } catch (duplicateError) {
+        // If we get a duplicate key error, the user was created by another request
+        if (duplicateError.code === 11000) {
+          console.log("🔄 User creation failed due to duplicate, fetching existing user...");
+          user = await User.findOne({ email: email.toLowerCase() });
+          if (!user) {
+            throw new Error("Failed to retrieve existing user after duplicate key error");
+          }
+          console.log("✅ Found existing user after duplicate error:", user.email);
+        } else {
+          throw duplicateError; // Re-throw if it's not a duplicate key error
+        }
+      }
+    } else {
+      console.log("👤 User already exists:", user.email, "GoogleID:", user.googleId || 'NONE');
+    }
+
+    // Update user with Google ID and photo if needed (outside the creation block)
+    if (user && !user.googleId) {
+      console.log("🔄 Updating existing user with Google ID:", user.email);
+      try {
+        user.googleId = decodedToken.uid;
+        user.photoURL = photoURL || user.photoURL;
+        await user.save();
+        console.log("✅ Updated existing user with Google ID:", user.email);
+      } catch (updateError) {
+        // If updating fails due to duplicate Google ID, it might already be set
+        if (updateError.code === 11000) {
+          console.log("🔄 Google ID already exists, refreshing user data...");
+          user = await User.findOne({ email: email.toLowerCase() });
+        } else {
+          throw updateError;
+        }
+      }
+    } else if (user && user.googleId) {
+      console.log("✅ User already has Google ID, no update needed:", user.email);
     }
 
     const payload = {
@@ -381,4 +416,6 @@ router.post('/admin/session/logout', (req, res) => {
   }
 });
 
+// Export router as default and initializeFirebase as named export
 export default router;
+export { initializeFirebase };
