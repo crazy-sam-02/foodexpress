@@ -1,0 +1,85 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "FoodExpress API",
+    "version": "1.0.0",
+    "description": "API documentation for FoodExpress notifications and health endpoints"
+  },
+  "servers": [
+    { "url": "/api", "description": "Relative API base" }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Health check",
+        "responses": {
+          "200": { "description": "Server is healthy" }
+        }
+      }
+    },
+    "/notifications/user": {
+      "get": {
+        "summary": "List notifications for the authenticated user",
+        "parameters": [
+          { "name": "page", "in": "query", "schema": { "type": "integer", "minimum": 1 }, "required": false },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 200 }, "required": false }
+        ],
+        "responses": {
+          "200": { "description": "Notifications returned" },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/notifications/user/{notificationId}/read": {
+      "patch": {
+        "summary": "Mark a notification as read",
+        "parameters": [
+          { "name": "notificationId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Marked as read" },
+          "401": { "description": "Unauthorized" },
+          "404": { "description": "Not found" }
+        }
+      }
+    },
+    "/notifications/user/read-all": {
+      "patch": {
+        "summary": "Mark all notifications as read for the authenticated user",
+        "responses": {
+          "200": { "description": "All marked as read" },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/notifications/admin/send": {
+      "post": {
+        "summary": "Send a notification (admin only)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": { "type": "string", "maxLength": 100 },
+                  "message": { "type": "string", "maxLength": 500 },
+                  "type": { "type": "string", "enum": ["order", "delivery", "delivered", "promotion", "announcement", "alert"] },
+                  "clientIds": { "type": "array", "items": { "type": "string" } }
+                },
+                "required": ["title", "message", "type"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Sent successfully" },
+          "401": { "description": "Unauthorized" },
+          "422": { "description": "Validation error" },
+          "429": { "description": "Rate limited" },
+          "500": { "description": "Server error" }
+        }
+      }
+    }
+  }
+}

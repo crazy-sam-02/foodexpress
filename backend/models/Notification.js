@@ -13,4 +13,8 @@ const NotificationSchema = new mongoose.Schema({
   created_at: { type: Date, default: Date.now }
 }, { collection: "notifications" });
 
+// Helpful indexes for efficient querying by client and recency
+NotificationSchema.index({ client_ids: 1, created_at: -1 });
+NotificationSchema.index({ created_at: -1 });
+
 export default mongoose.model("Notification", NotificationSchema);

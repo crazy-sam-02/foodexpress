@@ -12,6 +12,10 @@ interface NotificationsContextType {
   markAsRead: (notificationId: string) => void;
   markAllAsRead: () => void;
   unreadCount: number;
+  // pagination helpers
+  loadMore: () => Promise<void>;
+  hasMore: boolean;
+  loading: boolean;
 }
 
 const NotificationsContext = createContext<NotificationsContextType | undefined>(undefined);
@@ -23,6 +27,10 @@ export const NotificationsProvider: React.FC<{ children: ReactNode }> = ({ child
   const { user, token } = useUser();
   const [notifications, setNotifications] = useState<NotificationWithReadStatus[]>([]);
   const [socket, setSocket] = useState<Socket | null>(null);
+  const [page, setPage] = useState(1);
+  const [limit] = useState(20);
+  const [hasMore, setHasMore] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (user && token) {
@@ -62,10 +70,16 @@ export const NotificationsProvider: React.FC<{ children: ReactNode }> = ({ child
   }, [user, token]);
 
   useEffect(() => {
-    loadNotifications();
+    // reset and load first page when user changes
+    setNotifications([]);
+    setPage(1);
+    setHasMore(true);
+    if (user?.id) {
+      void loadNotifications(1);
+    }
   }, [user?.id]);
 
-  const loadNotifications = async () => {
+  const loadNotifications = async (requestedPage: number) => {
     if (!user || !token) {
       const notificationsWithStatus: NotificationWithReadStatus[] = defaultNotifications.map(notif => ({
         ...notif,
@@ -77,7 +91,8 @@ export const NotificationsProvider: React.FC<{ children: ReactNode }> = ({ child
     }
 
     try {
-      const response = await fetch(`${config.API_URL}/notifications/user`, {
+      setLoading(true);
+      const response = await fetch(`${config.API_URL}/notifications/user?page=${requestedPage}&limit=${limit}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -89,7 +104,14 @@ export const NotificationsProvider: React.FC<{ children: ReactNode }> = ({ child
       if (response.ok) {
         const result = await response.json();
         if (result.success && Array.isArray(result.notifications)) {
-          setNotifications(result.notifications);
+          if (requestedPage === 1) {
+            setNotifications(result.notifications);
+          } else {
+            setNotifications(prev => [...prev, ...result.notifications]);
+          }
+          setPage(requestedPage);
+          const totalPages = result.totalPages ?? 1;
+          setHasMore(requestedPage < totalPages);
           return;
         }
       }
@@ -108,7 +130,14 @@ export const NotificationsProvider: React.FC<{ children: ReactNode }> = ({ child
         read_at: null,
       }));
       setNotifications(notificationsWithStatus);
+    } finally {
+      setLoading(false);
     }
+  };
+
+  const loadMore = async () => {
+    if (!hasMore || loading) return;
+    await loadNotifications(page + 1);
   };
 
   const addNotification = async (notification: Omit<Notification, 'id' | 'created_at' | 'created_by'>, clientIds?: string[]) => {
@@ -210,6 +239,9 @@ export const NotificationsProvider: React.FC<{ children: ReactNode }> = ({ child
         markAsRead,
         markAllAsRead,
         unreadCount,
+        loadMore,
+        hasMore,
+        loading,
       }}
     >
       {children}

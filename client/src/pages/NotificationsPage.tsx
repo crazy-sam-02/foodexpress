@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import { useNotifications } from '@/contexts/NotificationsContext';
 
 const NotificationsPage = () => {
-  const { notifications, markAsRead, markAllAsRead, unreadCount } = useNotifications();
+  const { notifications, markAsRead, markAllAsRead, unreadCount, loadMore, hasMore, loading } = useNotifications();
 
   const getIcon = (type: string) => {
     switch (type) {
@@ -103,6 +103,25 @@ const NotificationsPage = () => {
               </Card>
             ))}
           </div>
+
+          {hasMore && notifications.length > 0 && (
+            <div className="flex justify-center mt-6">
+              <Button
+                variant="outline"
+                onClick={() => void loadMore()}
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900 mr-2"></div>
+                    Loading...
+                  </>
+                ) : (
+                  'Load more'
+                )}
+              </Button>
+            </div>
+          )}
 
           {notifications.length === 0 && (
             <div className="text-center py-12">

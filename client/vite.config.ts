@@ -26,4 +26,24 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    sourcemap: mode !== 'production',
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: [
+            'react',
+            'react-dom',
+            'react-router-dom'
+          ],
+          ui: [
+            'lucide-react'
+          ],
+          socket: [
+            'socket.io-client'
+          ]
+        }
+      }
+    }
+  }
 }));
