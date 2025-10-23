@@ -17,8 +17,8 @@ const AdminNotificationsPage = () => {
   const [message, setMessage] = useState('');
   const [type, setType] = useState<NotificationType>('announcement');
   const [isLoading, setIsLoading] = useState(false);
-  const [sendTo, setSendTo] = useState<'all' | 'specific'>('all');
-  const [targetOrderId, setTargetOrderId] = useState('');
+  const [sendTo, setSendTo] = useState<'all' | 'clientIds'>('all');
+  const [targetClientIds, setTargetClientIds] = useState('');
 
   const notificationTypes: { value: NotificationType; label: string; description: string }[] = [
     { value: 'announcement', label: 'Announcement', description: 'General announcements' },
@@ -37,49 +37,42 @@ const AdminNotificationsPage = () => {
       return;
     }
 
-    if (sendTo === 'specific' && !targetOrderId.trim()) {
-      toast.error('Please provide an Order ID');
+    if (sendTo === 'clientIds' && !targetClientIds.trim()) {
+      toast.error('Please provide Client IDs');
       return;
     }
 
     setIsLoading(true);
 
     try {
-      let userId: string | undefined = undefined;
-      
-      // If Order ID is provided, get userId from that order
-      if (sendTo === 'specific' && targetOrderId.trim()) {
-        const orders = JSON.parse(localStorage.getItem('orders') || '[]');
-        const order = orders.find((o: any) => o.id === targetOrderId.trim());
-        
-        if (!order) {
-          toast.error('Order not found. Please check the Order ID.');
-          setIsLoading(false);
-          return;
-        }
-        userId = order.userId;
-      }
+      const clientIdsArray = sendTo === 'clientIds' 
+        ? targetClientIds.split(',').map(id => id.trim()).filter(id => id)
+        : undefined;
 
-      addNotification({
+      await addNotification({
         title: title.trim(),
         message: message.trim(),
         type,
-      }, userId);
+      }, clientIdsArray);
 
-      toast.success(
-        sendTo === 'all' 
-          ? 'Notification sent successfully to all users!' 
-          : `Notification sent successfully to user with Order #${targetOrderId}!`
-      );
+      let successMessage = '';
+      if (sendTo === 'all') {
+        successMessage = 'Notification sent successfully to all users!';
+      } else if (sendTo === 'clientIds') {
+        const clientCount = clientIdsArray?.length || 0;
+        successMessage = `Notification sent successfully to ${clientCount} client(s)!`;
+      }
       
-      // Reset form
+      toast.success(successMessage);
+      
       setTitle('');
       setMessage('');
       setType('announcement');
-      setTargetOrderId('');
-    } catch (error) {
+      setTargetClientIds('');
+      setSendTo('all');
+    } catch (error: any) {
       console.error('Error sending notification:', error);
-      toast.error('Failed to send notification. Please try again.');
+      toast.error(error.message || 'Failed to send notification. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -94,7 +87,7 @@ const AdminNotificationsPage = () => {
             Send Notifications
           </h1>
           <p className="text-gray-600 mt-2">
-            Send notifications to all users. They will receive it instantly on their notification page.
+            Send notifications to all users or specific clients. They will receive it instantly on their notification page.
           </p>
         </div>
 
@@ -104,7 +97,7 @@ const AdminNotificationsPage = () => {
               <CardHeader>
                 <CardTitle>Create Notification</CardTitle>
                 <CardDescription>
-                  Fill in the details below to send a notification to all users
+                  Fill in the details below to send a notification.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -158,29 +151,30 @@ const AdminNotificationsPage = () => {
 
                   <div className="space-y-2">
                     <Label htmlFor="sendTo">Send To</Label>
-                    <Select value={sendTo} onValueChange={(value) => setSendTo(value as 'all' | 'specific')}>
+                    <Select value={sendTo} onValueChange={(value) => setSendTo(value as 'all' | 'clientIds')}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select recipients" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">All Users</SelectItem>
-                        <SelectItem value="specific">Specific User</SelectItem>
+                        <SelectItem value="clientIds">Multiple Clients by Client IDs</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
 
-                  {sendTo === 'specific' && (
-                    <div className="space-y-2 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                      <Label htmlFor="orderId">Order ID</Label>
-                      <Input
-                        id="orderId"
-                        placeholder="Enter order ID (e.g., 1733364728432136)"
-                        value={targetOrderId}
-                        onChange={(e) => setTargetOrderId(e.target.value)}
+                  {sendTo === 'clientIds' && (
+                    <div className="space-y-2 p-4 bg-purple-50 rounded-lg border border-purple-200">
+                      <Label htmlFor="clientIds">Client IDs (Comma Separated)</Label>
+                      <Textarea
+                        id="clientIds"
+                        placeholder="Enter multiple client IDs separated by commas..."
+                        value={targetClientIds}
+                        onChange={(e) => setTargetClientIds(e.target.value)}
                         required
+                        rows={3}
                       />
-                      <p className="text-xs text-gray-600">
-                        Enter the Order ID to send notification to the customer who placed that order
+                      <p className="text-xs text-purple-600">
+                        Enter multiple Client IDs separated by commas to send notification to specific clients.
                       </p>
                     </div>
                   )}
@@ -198,7 +192,7 @@ const AdminNotificationsPage = () => {
                     ) : (
                       <>
                         <Send className="h-4 w-4 mr-2" />
-                        {sendTo === 'all' ? 'Send Notification to All Users' : 'Send Notification to User'}
+                        {sendTo === 'all' ? 'Send Notification to All Users' : 'Send Notification to Clients'}
                       </>
                     )}
                   </Button>
@@ -221,16 +215,23 @@ const AdminNotificationsPage = () => {
                   <p>Notifications are delivered instantly to all users in real-time.</p>
                 </div>
                 <div>
-                  <h4 className="font-semibold mb-1">Notification Types</h4>
-                  <p>Choose the appropriate type to help users identify the notification quickly.</p>
+                  <h4 className="font-semibold mb-1">Targeting Options</h4>
+                  <ul className="list-disc list-inside space-y-1 mt-1">
+                    <li><strong>All Users:</strong> Send to everyone.</li>
+                    <li><strong>Client IDs:</strong> Send to multiple specific clients using their IDs.</li>
+                  </ul>
+                </div>
+                <div>
+                  <h4 className="font-semibold mb-1">How to Find IDs</h4>
+                  <p>You can find client IDs from the user management section.</p>
                 </div>
                 <div>
                   <h4 className="font-semibold mb-1">Best Practices</h4>
                   <ul className="list-disc list-inside space-y-1 mt-1">
-                    <li>Keep titles short and clear</li>
-                    <li>Be specific in messages</li>
-                    <li>Use appropriate notification types</li>
-                    <li>Avoid sending too many notifications</li>
+                    <li>Keep titles short and clear.</li>
+                    <li>Be specific in messages.</li>
+                    <li>Use appropriate notification types.</li>
+                    <li>Verify IDs before sending.</li>
                   </ul>
                 </div>
               </CardContent>

@@ -1,11 +1,14 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { io, Socket } from 'socket.io-client';
 import { Notification, NotificationWithReadStatus } from '@/types/notifications';
 import { defaultNotifications } from '@/data/notificationsData';
 import { useUser } from './UserContext';
+import { config } from '@/lib/config';
+import { toast } from 'sonner';
 
 interface NotificationsContextType {
   notifications: NotificationWithReadStatus[];
-  addNotification: (notification: Omit<Notification, 'id' | 'created_at' | 'created_by'>, targetUserId?: string) => void;
+  addNotification: (notification: Omit<Notification, 'id' | 'created_at' | 'created_by'>, clientIds?: string[]) => Promise<any>;
   markAsRead: (notificationId: string) => void;
   markAllAsRead: () => void;
   unreadCount: number;
@@ -17,121 +20,184 @@ const STORAGE_KEY = 'food_express_notifications';
 const READ_STATUS_KEY = 'food_express_notification_read_status';
 
 export const NotificationsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const { user } = useUser();
+  const { user, token } = useUser();
   const [notifications, setNotifications] = useState<NotificationWithReadStatus[]>([]);
+  const [socket, setSocket] = useState<Socket | null>(null);
+
+  useEffect(() => {
+    if (user && token) {
+      const socketInstance = io(config.SOCKET_URL, {
+        withCredentials: true,
+      });
+
+      socketInstance.on("connect", () => {
+        console.log("🔔 Notifications socket connected:", socketInstance.id);
+        socketInstance.emit("authenticate", {
+          userId: user.id,
+          token: token
+        });
+      });
+
+      socketInstance.on("notification", (notification: NotificationWithReadStatus) => {
+        console.log("🔔 Received real-time notification:", notification);
+        
+        setNotifications(prev => [notification, ...prev]);
+        
+        toast.success(`New notification: ${notification.title}`, {
+          description: notification.message,
+          duration: 5000,
+        });
+      });
+
+      socketInstance.on("disconnect", () => {
+        console.log("🔔 Notifications socket disconnected");
+      });
+
+      setSocket(socketInstance);
+
+      return () => {
+        socketInstance.disconnect();
+      };
+    }
+  }, [user, token]);
 
   useEffect(() => {
     loadNotifications();
   }, [user?.id]);
 
-  const loadNotifications = () => {
-    // Load all notifications from localStorage
-    const stored = localStorage.getItem(STORAGE_KEY);
-    const allNotifications: any[] = stored ? JSON.parse(stored) : defaultNotifications;
-
-    // Filter notifications: show global (no target_user_id) or user-specific notifications
-    const userNotifications = allNotifications.filter(notif => 
-      !notif.target_user_id || notif.target_user_id === user?.id
-    );
-
-    // Load read status for current user
-    const readStatusKey = user?.id ? `${READ_STATUS_KEY}_${user.id}` : READ_STATUS_KEY;
-    const storedReadStatus = localStorage.getItem(readStatusKey);
-    const readStatus: Record<string, { is_read: boolean; read_at: string | null }> = storedReadStatus 
-      ? JSON.parse(storedReadStatus) 
-      : {};
-
-    // Combine notifications with read status
-    const notificationsWithStatus: NotificationWithReadStatus[] = userNotifications
-      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-      .map((notif) => ({
+  const loadNotifications = async () => {
+    if (!user || !token) {
+      const notificationsWithStatus: NotificationWithReadStatus[] = defaultNotifications.map(notif => ({
         ...notif,
-        is_read: readStatus[notif.id]?.is_read || false,
-        read_at: readStatus[notif.id]?.read_at || null,
+        is_read: false,
+        read_at: null,
       }));
+      setNotifications(notificationsWithStatus);
+      return;
+    }
 
-    setNotifications(notificationsWithStatus);
+    try {
+      const response = await fetch(`${config.API_URL}/notifications/user`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+      });
 
-    // Save default notifications if none exist
-    if (!stored) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultNotifications));
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && Array.isArray(result.notifications)) {
+          setNotifications(result.notifications);
+          return;
+        }
+      }
+      
+      const notificationsWithStatus: NotificationWithReadStatus[] = defaultNotifications.map(notif => ({
+        ...notif,
+        is_read: false,
+        read_at: null,
+      }));
+      setNotifications(notificationsWithStatus);
+    } catch (error) {
+      console.error('Error loading notifications:', error);
+      const notificationsWithStatus: NotificationWithReadStatus[] = defaultNotifications.map(notif => ({
+        ...notif,
+        is_read: false,
+        read_at: null,
+      }));
+      setNotifications(notificationsWithStatus);
     }
   };
 
-  const addNotification = (notification: Omit<Notification, 'id' | 'created_at' | 'created_by'>, targetUserId?: string) => {
-    const newNotification: any = {
-      ...notification,
-      id: Date.now().toString(),
-      created_at: new Date().toISOString(),
-      created_by: user?.id || 'admin',
-      target_user_id: targetUserId || null, // null means all users
-    };
+  const addNotification = async (notification: Omit<Notification, 'id' | 'created_at' | 'created_by'>, clientIds?: string[]) => {
+    try {
+      const response = await fetch(`${config.API_URL}/notifications/admin/send`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          title: notification.title,
+          message: notification.message,
+          type: notification.type,
+          clientIds: clientIds,
+        }),
+      });
 
-    // Load existing notifications
-    const stored = localStorage.getItem(STORAGE_KEY);
-    const existingNotifications: any[] = stored ? JSON.parse(stored) : [];
-    
-    // Add new notification
-    const updatedNotifications = [newNotification, ...existingNotifications];
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedNotifications));
+      const result = await response.json();
 
-    // Update state
-    loadNotifications();
+      if (!response.ok) {
+        throw new Error(result.message || 'Failed to send notification');
+      }
+
+      console.log('✅ Notification sent successfully:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ Error sending notification:', error);
+      throw error;
+    }
   };
 
-  const markAsRead = (notificationId: string) => {
-    if (!user?.id) return;
+  const markAsRead = async (notificationId: string) => {
+    if (!user?.id || !token) return;
 
-    const readStatusKey = `${READ_STATUS_KEY}_${user.id}`;
-    const storedReadStatus = localStorage.getItem(readStatusKey);
-    const readStatus: Record<string, { is_read: boolean; read_at: string | null }> = storedReadStatus 
-      ? JSON.parse(storedReadStatus) 
-      : {};
+    try {
+      const response = await fetch(`${config.API_URL}/notifications/user/${notificationId}/read`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+      });
 
-    readStatus[notificationId] = {
-      is_read: true,
-      read_at: new Date().toISOString(),
-    };
-
-    localStorage.setItem(readStatusKey, JSON.stringify(readStatus));
-
-    // Update state
-    setNotifications((prev) =>
-      prev.map((notif) =>
-        notif.id === notificationId
-          ? { ...notif, is_read: true, read_at: new Date().toISOString() }
-          : notif
-      )
-    );
+      if (response.ok) {
+        setNotifications((prev) =>
+          prev.map((notif) =>
+            notif.id === notificationId
+              ? { ...notif, is_read: true, read_at: new Date().toISOString() }
+              : notif
+          )
+        );
+      } else {
+        console.error('Failed to mark notification as read');
+      }
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
   };
 
-  const markAllAsRead = () => {
-    if (!user?.id) return;
+  const markAllAsRead = async () => {
+    if (!user?.id || !token) return;
 
-    const readStatusKey = `${READ_STATUS_KEY}_${user.id}`;
-    const storedReadStatus = localStorage.getItem(readStatusKey);
-    const readStatus: Record<string, { is_read: boolean; read_at: string | null }> = storedReadStatus 
-      ? JSON.parse(storedReadStatus) 
-      : {};
+    try {
+      const response = await fetch(`${config.API_URL}/notifications/user/read-all`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+      });
 
-    const now = new Date().toISOString();
-    notifications.forEach((notif) => {
-      readStatus[notif.id] = {
-        is_read: true,
-        read_at: now,
-      };
-    });
-
-    localStorage.setItem(readStatusKey, JSON.stringify(readStatus));
-
-    // Update state
-    setNotifications((prev) =>
-      prev.map((notif) => ({
-        ...notif,
-        is_read: true,
-        read_at: now,
-      }))
-    );
+      if (response.ok) {
+        const now = new Date().toISOString();
+        setNotifications((prev) =>
+          prev.map((notif) => ({
+            ...notif,
+            is_read: true,
+            read_at: now,
+          }))
+        );
+      } else {
+        console.error('Failed to mark all notifications as read');
+      }
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
+    }
   };
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;

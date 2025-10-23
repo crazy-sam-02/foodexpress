@@ -13,6 +13,7 @@ import productRoutes from "./routes/products.js";
 import categoryRoutes from "./routes/categories.js";
 import cartRoutes from "./routes/cart.js";
 import orderRoutes from "./routes/orders.js";
+import notificationRoutes from "./routes/notifications.js";
 
 dotenv.config();
 
@@ -109,12 +110,38 @@ const io = new SocketIOServer(server, {
   }
 });
 
-// Socket.IO connection handling
+// Socket.IO connection handling with user authentication
 io.on("connection", (socket) => {
   console.log("🔌 Client connected:", socket.id);
   
+  // Handle user authentication for socket
+  socket.on("authenticate", (data) => {
+    const { userId, token } = data;
+    if (userId && token) {
+      socket.userId = userId;
+      socket.join(`user_${userId}`); // Join user-specific room
+      console.log(`👤 User ${userId} authenticated and joined room user_${userId}`);
+    }
+  });
+  
+  // Handle admin authentication for socket
+  socket.on("authenticate_admin", (data) => {
+    const { adminId } = data;
+    if (adminId) {
+      socket.adminId = adminId;
+      socket.join("admin_room"); // Join admin room
+      console.log(`👑 Admin ${adminId} authenticated and joined admin room`);
+    }
+  });
+  
   socket.on("disconnect", () => {
-    console.log("🔌 Client disconnected:", socket.id);
+    if (socket.userId) {
+      console.log(`🔌 User ${socket.userId} disconnected:`, socket.id);
+    } else if (socket.adminId) {
+      console.log(`🔌 Admin ${socket.adminId} disconnected:`, socket.id);
+    } else {
+      console.log("🔌 Client disconnected:", socket.id);
+    }
   });
 });
 
@@ -127,6 +154,7 @@ app.use("/api/products", productRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/orders", orderRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 // Health check endpoint for Render
 app.get("/health", (req, res) => {

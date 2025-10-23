@@ -456,6 +456,59 @@ router.get('/admin/all', requireAdminSession, async (req, res) => {
   }
 });
 
+// Get customer info by order ID (admin only) - Helper for notifications
+router.get('/admin/customer/:orderId', requireAdminSession, async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    
+    if (!mongoose.Types.ObjectId.isValid(orderId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid order ID format'
+      });
+    }
+
+    const order = await Order.findById(orderId).populate('userId', '_id name email');
+    
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found'
+      });
+    }
+
+    if (!order.userId) {
+      return res.status(404).json({
+        success: false,
+        message: 'Customer information not found for this order'
+      });
+    }
+
+    res.json({
+      success: true,
+      customer: {
+        id: order.userId._id.toString(),
+        name: order.userId.name,
+        email: order.userId.email
+      },
+      order: {
+        id: order._id.toString(),
+        total: order.total,
+        status: order.status,
+        orderDate: order.orderDate
+      }
+    });
+
+  } catch (error) {
+    console.error('Error fetching customer info:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch customer information',
+      error: error.message
+    });
+  }
+});
+
 // Update order details (admin only)
 router.patch('/admin/:id', requireAdminSession, async (req, res) => {
   try {
